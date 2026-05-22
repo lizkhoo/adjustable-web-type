@@ -11,14 +11,14 @@ Users asked for four popular OFL/Google Fonts starter categories: fun/bubbly, el
 | Fun / bubbly | [**Rubik Bubbles**](https://fonts.google.com/specimen/Rubik+Bubbles) | Inflated, rounded letterforms; unmistakably bubbly display face | SIL OFL 1.1, Google Fonts |
 | Elegant curved serif | [**Instrument Serif**](https://fonts.google.com/specimen/Instrument+Serif) | Soft curves, refined contrast; already used in demo UI chrome | SIL OFL 1.1, Google Fonts |
 | Neutral utilitarian sans | [**Source Sans 3**](https://fonts.google.com/specimen/Source+Sans+3) | Adobe’s neutral workhorse; clear, utilitarian, strong readability | SIL OFL 1.1, Google Fonts |
-| Slab serif | **Roboto Slab** | Strong rectangular serifs, familiar workhorse, good weight range | Apache 2.0, Google Fonts |
+| Rectangular / slab serif | [**Bitter**](https://fonts.google.com/specimen/Bitter) | Contemporary slab with rectangular serifs; designed for screen readability | SIL OFL 1.1, Google Fonts |
 
 ### Strong alternates
 
 - **Bubbly:** Fredoka, Baloo 2, Nunito
 - **Elegant serif:** Cormorant, Fraunces, Lora
 - **Neutral sans:** Inter, IBM Plex Sans, Noto Sans
-- **Slab:** Zilla Slab, Bitter, Arvo
+- **Slab:** Roboto Slab, Zilla Slab, Arvo
 
 ### Implementation notes (when adding a font picker)
 
