@@ -3,21 +3,31 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Adjustable Web Type — sculpt-lettering improved build</title>
+<title>Adjustable Web Type — parametric letterforms</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root {
-    --paper: #f6ecd6;
-    --paper-2: #fbf4e3;
-    --rule: #d8c6a0;
-    --ink: #1f1410;
-    --ink-soft: #4a352c;
-    --muted: #7a5f51;
-    --accent: #d24d3a;
-    --accent-soft: #ffe6e0;
-    --good: #4a6b3a;
+    --white: #ffffff;
+    --black: #0a0a0b;
+    --grey-50: #f6f7f9;
+    --grey-100: #eceef2;
+    --grey-200: #d4d8e0;
+    --grey-400: #8b929e;
+    --grey-600: #525860;
+    --grey-800: #2a2d32;
+    --ultramarine: #1a2f6e;
+    --ultramarine-dark: #142556;
+    --ultramarine-soft: #e6eaf2;
+    --paper: var(--grey-50);
+    --paper-2: var(--white);
+    --rule: var(--grey-200);
+    --ink: var(--black);
+    --ink-soft: var(--grey-800);
+    --muted: var(--grey-600);
+    --accent: var(--ultramarine);
+    --accent-soft: var(--ultramarine-soft);
     --sans: "Instrument Sans", ui-sans-serif, system-ui, sans-serif;
     --serif: "Instrument Serif", "Source Serif Pro", Georgia, serif;
     --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -37,9 +47,7 @@
 
   body {
     min-height: 100vh;
-    background:
-      radial-gradient(circle at 14% 8%, rgba(255, 186, 88, 0.32), transparent 36%),
-      var(--paper);
+    background: var(--paper);
   }
 
   /* ─── Masthead ────────────────────────────────────────────────────── */
@@ -63,7 +71,6 @@
     align-items: center;
     justify-content: center;
     gap: 14px;
-    border-top: 1px solid var(--rule);
     background: var(--paper-2);
     font-family: var(--mono);
     font-size: 11px;
@@ -73,6 +80,39 @@
     display: flex;
     align-items: center;
     gap: 8px;
+    position: relative;
+  }
+  .mast .row-secondary .ctrl[data-tip]::after {
+    content: attr(data-tip);
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% + 10px);
+    transform: translateX(-50%) translateY(4px);
+    width: max-content;
+    max-width: 260px;
+    padding: 8px 10px;
+    background: var(--ink);
+    color: var(--paper-2);
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 400;
+    letter-spacing: 0.02em;
+    line-height: 1.45;
+    text-transform: none;
+    text-align: left;
+    border-radius: 2px;
+    white-space: normal;
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 120ms ease, transform 120ms ease, visibility 120ms ease;
+    z-index: 30;
+  }
+  .mast .row-secondary .ctrl[data-tip]:hover::after,
+  .mast .row-secondary .ctrl[data-tip]:focus-within::after {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0);
   }
   .mast .row-secondary .ctrl label {
     color: var(--muted);
@@ -98,33 +138,72 @@
     letter-spacing: 0.06em;
     text-transform: uppercase;
     padding: 4px 10px;
-    border: 1px solid var(--accent);
-    color: var(--accent);
+    min-width: 36px;
+    border: 1px solid var(--rule);
+    color: var(--muted);
     background: transparent;
     cursor: pointer;
     border-radius: 2px;
   }
   .mast .row-secondary button.toggle.on {
+    border-color: var(--accent);
     background: var(--accent);
     color: var(--paper-2);
   }
+  .mast .row-secondary input.hex-input {
+    width: 76px;
+    padding: 4px 8px;
+    font-family: var(--mono);
+    font-size: 11px;
+    border: 1px solid var(--rule);
+    background: var(--paper);
+    color: var(--ink);
+    border-radius: 2px;
+    outline: none;
+  }
+  .mast .row-secondary input.hex-input:focus { border-color: var(--accent); }
+  .mast .row-secondary input.hex-input.invalid { border-color: #b42318; color: #b42318; }
+  .mast .row-secondary input.hex-swatch {
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: 1px solid var(--rule);
+    background: transparent;
+    cursor: pointer;
+    border-radius: 2px;
+  }
   .mast .left {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+  .mast .left .site-title {
+    margin: 0;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink);
+  }
+  .mast .left .site-meta {
     font-family: var(--mono);
     font-size: 11px;
     letter-spacing: 0.12em;
     text-transform: uppercase;
     color: var(--muted);
   }
-  .mast .left b { color: var(--ink); font-weight: 600; letter-spacing: 0.06em; }
   .mast .center {
     display: flex;
     align-items: center;
     gap: 10px;
   }
-  .mast .right {
+
+  .stage-actions {
     display: flex;
-    justify-content: flex-end;
+    justify-content: center;
     gap: 8px;
+    padding-top: 24px;
   }
 
   input.text-input {
@@ -141,6 +220,18 @@
   }
   input.text-input:focus { border-color: var(--accent); }
 
+  .input-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .input-hint {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.04em;
+  }
+
   button.btn {
     font-family: var(--mono);
     font-size: 11px;
@@ -156,7 +247,7 @@
   }
   button.btn:hover { background: var(--accent); color: var(--paper-2); }
   button.btn.solid { background: var(--accent); color: var(--paper-2); }
-  button.btn.solid:hover { background: #b53a26; border-color: #b53a26; }
+  button.btn.solid:hover { background: var(--ultramarine-dark); border-color: var(--ultramarine-dark); }
   button.btn.ghost { border-color: var(--rule); color: var(--muted); }
   button.btn.ghost:hover { background: var(--rule); color: var(--ink); }
 
@@ -164,6 +255,7 @@
   .stage-wrap {
     padding: 56px 28px 24px;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
     min-height: calc(100vh - 220px);
@@ -185,27 +277,42 @@
   /* ─── Footer strip ────────────────────────────────────────────────── */
   .footer {
     padding: 20px 28px 32px;
-    border-top: 1px solid var(--rule);
     display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    gap: 24px;
+    flex-direction: column;
+    gap: 16px;
     font-family: var(--mono);
     font-size: 11px;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+  }
+  .footer-hints {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0;
+  }
+  .footer-hints b { color: var(--ink); }
+  .footer-hints span + span { margin-left: 14px; padding-left: 14px; border-left: 1px solid var(--rule); }
+  .footer-dev {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding-top: 16px;
+    border-top: 1px solid var(--rule);
+    font-size: 10px;
     letter-spacing: 0.06em;
     text-transform: uppercase;
-    color: var(--muted);
-    flex-wrap: wrap;
+    color: var(--grey-400);
   }
-  .footer .meta b { color: var(--ink); }
-  .footer .meta span + span { margin-left: 14px; padding-left: 14px; border-left: 1px solid var(--rule); }
-  .footer a { color: var(--accent); text-decoration: none; }
+  .footer-dev a { color: var(--muted); text-decoration: none; }
+  .footer-dev a:hover { color: var(--accent); }
 
   /* ─── Patch notes ─────────────────────────────────────────────────── */
   .notes {
     max-width: 900px;
     margin: 0 auto;
     padding: 64px 32px 120px;
+    border-top: 1px solid var(--rule);
   }
   .notes h2 {
     font-family: var(--serif);
@@ -234,22 +341,22 @@
     letter-spacing: 0.16em;
     text-transform: uppercase;
     color: var(--accent);
-    margin: 0 0 12px;
-    padding-bottom: 8px;
-    border-bottom: 1px solid var(--rule);
+    margin: 0 0 16px;
   }
   .patches {
     display: grid;
     grid-template-columns: 1fr;
-    gap: 0;
+    gap: 20px;
   }
   .patch {
     display: grid;
     grid-template-columns: 56px 1fr;
     gap: 18px;
-    padding: 22px 0;
-    border-bottom: 1px solid var(--rule);
+    padding: 0;
     align-items: baseline;
+  }
+  .patches.no-num .patch {
+    grid-template-columns: 1fr;
   }
   .patch .num {
     font-family: var(--mono);
@@ -314,7 +421,7 @@
   @media (max-width: 900px) {
     .mast .row-primary { grid-template-columns: 1fr; gap: 12px; padding: 12px 18px; }
     .mast .row-secondary { padding: 10px 18px; flex-wrap: wrap; }
-    .mast .left, .mast .right { justify-content: center; text-align: center; }
+    .mast .left, .stage-actions { justify-content: center; text-align: center; }
     .mast .center { flex-wrap: wrap; justify-content: center; }
     input.text-input { width: 100%; max-width: 360px; }
     .stage-wrap { min-height: auto; padding: 32px 18px 16px; }
@@ -329,53 +436,64 @@
 <header class="mast">
   <div class="row-primary">
     <div class="left">
-      <b>Adjustable Web Type</b>
-      &nbsp;·&nbsp;
-      sculpt-lettering · parametric letterforms · v0.2
+      <h1 class="site-title">Adjustable Web Type</h1>
+      <span class="site-meta">v0.2</span>
     </div>
     <div class="center">
-      <input id="text-input" class="text-input" type="text" value="hello world" spellcheck="false" autocomplete="off" placeholder="type any text">
-      <button id="reset" class="btn ghost" type="button">Reset</button>
-    </div>
-    <div class="right">
-      <button id="copy-svg" class="btn" type="button">Copy SVG</button>
-      <button id="open-embed" class="btn solid" type="button">Open interactive embed →</button>
+      <div class="input-wrap">
+        <input id="text-input" class="text-input" type="text" value="hello world" spellcheck="false" autocomplete="off" placeholder="Letters and spaces only">
+        <span class="input-hint">A–Z, a–z, and spaces</span>
+      </div>
+      <button id="reset" class="btn ghost" type="button" title="Restore each letter to its default shape">Reset letters</button>
     </div>
   </div>
   <div class="row-secondary">
-    <div class="ctrl">
+    <div class="ctrl" data-tip="Starter font mood — tunes stroke weight, curvature, and glyph params inspired by open-source typefaces.">
       <label for="preset">Preset</label>
       <select id="preset">
-        <option value="bubbly">bubbly</option>
-        <option value="none">— defaults —</option>
+        <option value="bubbly">bubbly · Rubik Bubbles</option>
+        <option value="instrumentSerif">instrument serif · Instrument Serif</option>
+        <option value="sourceSans">source sans · Source Sans 3</option>
+        <option value="bitter">bitter · Bitter</option>
+        <option value="ibmPlexMono">plex mono · IBM Plex Mono</option>
+        <option value="none">No preset (glyph defaults)</option>
       </select>
     </div>
     <span class="divider"></span>
-    <div class="ctrl">
-      <label>Monoline curvature</label>
-      <button id="t-curv" class="toggle on" type="button">on</button>
+    <div class="ctrl" data-tip="Stroke color for the wordmark. Enter a six-digit hex code (#rrggbb), or use the swatch.">
+      <label for="hex-color">Hex</label>
+      <input id="hex-swatch" class="hex-swatch" type="color" value="#0a0a0b" aria-label="Pick color">
+      <input id="hex-color" class="hex-input" type="text" value="#0a0a0b" spellcheck="false" autocomplete="off" maxlength="7" placeholder="#000000">
     </div>
     <span class="divider"></span>
-    <div class="ctrl">
-      <label>Mouse-follow handles</label>
-      <button id="t-mouse" class="toggle" type="button">off</button>
+    <div class="ctrl" data-tip="Curve the auto-generated letters (A–Z and the expanded lowercase set). Off restores straight polylines.">
+      <label id="t-curv-label" for="t-curv">Monoline curvature</label>
+      <button id="t-curv" class="toggle on" type="button" aria-pressed="true" aria-labelledby="t-curv-label">on</button>
+    </div>
+    <span class="divider"></span>
+    <div class="ctrl" data-tip="Map cursor position into handle drag deltas so the whole wordmark morphs as you move the mouse.">
+      <label id="t-mouse-label" for="t-mouse">Mouse-Follow response</label>
+      <button id="t-mouse" class="toggle" type="button" aria-pressed="false" aria-labelledby="t-mouse-label">off</button>
     </div>
   </div>
 </header>
 
 <!-- ─── Hero render ─────────────────────────────────────────────────── -->
-<main class="stage-wrap">
+<main class="stage-wrap" aria-label="Interactive wordmark editor">
   <div id="stage" class="stage"></div>
+  <div class="stage-actions">
+    <button id="copy-svg" class="btn ghost" type="button">Copy SVG</button>
+  </div>
 </main>
 
 <!-- ─── Footer strip ────────────────────────────────────────────────── -->
 <div class="footer">
-  <div class="meta">
-    <span><b>Drag any handle</b> to sculpt that letter</span>
-    <span>Hollow controls with arms = tangent params</span>
-    <span>Filled squares = positional anchors</span>
+  <div class="footer-hints">
+    <span><b>Drag any handle</b> to sculpt that letter.</span>
+    <span>Circles with arms = curve controls</span>
+    <span>Filled circles = positional anchors</span>
   </div>
-  <div class="meta">
+  <div class="footer-dev">
     <a href="CHANGES.md">CHANGES.md</a>
     <span>·</span>
     <a href="lib/sculpt.js">lib/sculpt.js</a>
@@ -383,10 +501,10 @@
 </div>
 
 <!-- ─── Developer documentation ─────────────────────────────────────── -->
-<section class="notes">
-  <h2>Developer <em>documentation</em>.</h2>
+<section id="developer-docs" class="notes" aria-labelledby="developer-docs-heading">
+  <h2 id="developer-docs-heading">Developer <em>documentation</em>.</h2>
   <p class="deck">
-    A drop-in script that draws an alphabet of parametric letterforms with draggable Bezier handles. One global, two classes, one preset. Everything you need to embed it is on this page.
+    A drop-in script that draws an alphabet of parametric letterforms with draggable Bezier handles. One global, two classes, five font-mood presets. Everything you need to embed it is on this page.
   </p>
 
   <div class="sprint">
@@ -405,7 +523,7 @@
           <h4>Construct, mount, optionally make it interactive</h4>
 <pre class="code"><code>const wm = new SculptLettering.Wordmark('hello', {
   preset:   SculptLettering.presets.bubbly,  // optional
-  color:    '#1f1410',
+  color:    '#0a0a0b',
   tracking: 12,
   padding:  64,
 });
@@ -419,51 +537,44 @@ wm.makeInteractive();                         // draggable handles + tooltip</co
 
   <div class="sprint">
     <h3>Wordmark API</h3>
-    <div class="patches">
+    <div class="patches no-num">
       <div class="patch">
-        <div class="num">·</div>
         <div>
           <h4><code>setText(newText)</code></h4>
           <p>Position-matched diff. Glyphs at indices that still match the old text keep their tuned params; the rest are re-instantiated from the preset. Use this instead of constructing a new wordmark to preserve user edits across keystrokes.</p>
         </div>
       </div>
       <div class="patch">
-        <div class="num">·</div>
         <div>
           <h4><code>makeInteractive()</code> / <code>freezeInteraction()</code></h4>
           <p>Toggles handles + hover tooltip. Tooltip styling, edge-flip, and pointer-leave fallbacks are built in — no CSS required.</p>
         </div>
       </div>
       <div class="patch">
-        <div class="num">·</div>
         <div>
           <h4><code>enableMouseFollow(opts?)</code> / <code>disableMouseFollow()</code></h4>
           <p>Maps the page mouse position into every handle's drag-delta function, so the whole wordmark morphs as the cursor moves. Snapshot is captured on enable and restored on disable. Options: <code>origin</code> (<code>'center'</code> default | <code>'topleft'</code>), <code>strength</code> (default <code>0.4</code>), <code>clamp</code> (max pixel offset, default <code>220</code>), <code>tangentOnly</code> (<code>false</code>).</p>
         </div>
       </div>
       <div class="patch">
-        <div class="num">·</div>
         <div>
           <h4><code>resetAll()</code> / <code>resetGlyph(index)</code></h4>
           <p>Reverts params to the glyph module's <code>defaultParams</code> (not the preset). Re-renders.</p>
         </div>
       </div>
       <div class="patch">
-        <div class="num">·</div>
         <div>
           <h4><code>toSVG()</code> → <code>string</code></h4>
           <p>Static SVG markup of the current state, with no handle layer. Safe to drop into HTML, an <code>&lt;img src&gt;</code> data URL, or a build artifact.</p>
         </div>
       </div>
       <div class="patch">
-        <div class="num">·</div>
         <div>
           <h4><code>toState()</code> → <code>object</code></h4>
           <p>Serializable snapshot: <code>{ text, tracking, color, padding, glyphs: [{character, params}], modes: { mouseFollow } }</code>. JSON-safe. When mouse-follow is on, <code>params</code> contains the rest values (the snapshot taken at enable), not the cursor-morphed live values.</p>
         </div>
       </div>
       <div class="patch">
-        <div class="num">·</div>
         <div>
           <h4><code>await toInteractiveBundle()</code> → <code>string</code></h4>
           <p>Full self-contained HTML document — library source inlined, no CDN, no fetches. Carries the full state from <code>toState()</code>, including any active modes: if mouse-follow is on when you call this, the embed boots with mouse-follow on too. Returns the document string; paste it anywhere. If the library was inlined (not loaded by <code>&lt;script src&gt;</code>), set <code>SculptLettering.Wordmark.LIBRARY_SOURCE</code> first.</p>
@@ -474,16 +585,14 @@ wm.makeInteractive();                         // draggable handles + tooltip</co
 
   <div class="sprint">
     <h3>Glyphs &amp; handles</h3>
-    <div class="patches">
+    <div class="patches no-num">
       <div class="patch">
-        <div class="num">·</div>
         <div>
           <h4>Glyph parameters</h4>
           <p>Each character has its own param set with min/max ranges. Curated glyphs (<code>a n o s h i e t r l w d</code>) expose hand-authored Bezier params (bowl width, tension, aperture, terminal arm, …). The other 40 letters share a monoline schema: <code>xHeight</code>/<code>capHeight</code>, <code>width</code>, <code>strokeWeight</code>, <code>slant</code>, <code>curvature</code>. Inspect with <code>wm.glyphs[i].paramRanges</code>.</p>
         </div>
       </div>
       <div class="patch">
-        <div class="num">·</div>
         <div>
           <h4>Handle types</h4>
           <p><b>Filled squares</b> are positional anchors — dragging moves the param along a screen axis. <b>Hollow circles with arms</b> are tangent params (e.g. <code>bowlTopTension</code>, <code>curvature</code>) — the arm length encodes the value. Programmatic equivalents: <code>wm.glyphs[i].set(name, value)</code> or <code>setMany({…})</code>, both clamped to range.</p>
@@ -494,9 +603,8 @@ wm.makeInteractive();                         // draggable handles + tooltip</co
 
   <div class="sprint">
     <h3>Presets &amp; extending</h3>
-    <div class="patches">
+    <div class="patches no-num">
       <div class="patch">
-        <div class="num">·</div>
         <div>
           <h4>Preset shape</h4>
 <pre class="code"><code>{
@@ -508,7 +616,6 @@ wm.makeInteractive();                         // draggable handles + tooltip</co
         </div>
       </div>
       <div class="patch">
-        <div class="num">·</div>
         <div>
           <h4>Registering a custom glyph</h4>
           <p>Pass a module to <code>SculptLettering.registerGlyph({ character, defaultParams, paramRanges, construct(p), handles(p), advance(p), bounds(p), tangentParams? })</code>. <code>construct</code> returns an array of SVG path <code>d</code> strings; <code>bounds</code> returns <code>{minX,maxX,minY,maxY}</code> in the glyph's local coordinates (baseline at y=0).</p>
@@ -546,8 +653,9 @@ wm.makeInteractive();                         // draggable handles + tooltip</co
   const input   = document.getElementById('text-input');
   const reset   = document.getElementById('reset');
   const copySvg = document.getElementById('copy-svg');
-  const openEm  = document.getElementById('open-embed');
   const preset  = document.getElementById('preset');
+  const hexColor = document.getElementById('hex-color');
+  const hexSwatch = document.getElementById('hex-swatch');
   const tCurv   = document.getElementById('t-curv');
   const tMouse  = document.getElementById('t-mouse');
   const flashEl = document.getElementById('flash');
@@ -555,6 +663,7 @@ wm.makeInteractive();                         // draggable handles + tooltip</co
   let curvatureOn = true;
   let mouseFollowOn = false;
   let currentPreset = 'bubbly';
+  let currentColor = '#0a0a0b';
   let wm = null;
 
   function flash(msg) {
@@ -564,9 +673,29 @@ wm.makeInteractive();                         // draggable handles + tooltip</co
     flash._timer = setTimeout(() => flashEl.classList.remove('show'), 1400);
   }
 
+  function parseHex(raw) {
+    const m = /^#?([0-9a-fA-F]{6})$/.exec(String(raw).trim());
+    return m ? ('#' + m[1].toLowerCase()) : null;
+  }
+
+  function syncHexInputs(hex, source) {
+    if (source !== 'text') hexColor.value = hex;
+    if (source !== 'swatch') hexSwatch.value = hex;
+    hexColor.classList.remove('invalid');
+  }
+
+  function applyColor(hex, source) {
+    currentColor = hex;
+    syncHexInputs(hex, source);
+    if (!wm) return;
+    wm.color = hex;
+    wm._render();
+  }
+
   function buildPreset() {
     if (currentPreset === 'none') return undefined;
-    const p = SculptLettering.presets.bubbly;
+    const p = SculptLettering.presets[currentPreset];
+    if (!p) return undefined;
     if (curvatureOn) return p;
     // Override default curvature to 0 to demonstrate the v1 straight-line look
     return {
@@ -580,7 +709,7 @@ wm.makeInteractive();                         // draggable handles + tooltip</co
     stage.innerHTML = '';
     wm = new SculptLettering.Wordmark(text || ' ', {
       preset: buildPreset(),
-      color: '#1f1410',
+      color: currentColor,
       tracking: 12,
       padding: 64,
     });
@@ -602,8 +731,29 @@ wm.makeInteractive();                         // draggable handles + tooltip</co
   }
 
   // Wire up
+  hexColor.addEventListener('input', () => {
+    const hex = parseHex(hexColor.value);
+    if (hex) applyColor(hex, 'text');
+    else hexColor.classList.add('invalid');
+  });
+
+  hexColor.addEventListener('blur', () => {
+    const hex = parseHex(hexColor.value);
+    if (hex) applyColor(hex, 'text');
+    else syncHexInputs(currentColor);
+  });
+
+  hexSwatch.addEventListener('input', () => {
+    applyColor(hexSwatch.value.toLowerCase(), 'swatch');
+  });
+
   input.addEventListener('input', () => {
-    const t = safeText(input.value);
+    const raw = input.value;
+    const t = safeText(raw);
+    if (raw !== t) {
+      input.value = t;
+      flash('Unsupported characters removed');
+    }
     if (wm && wm.text === t) return;
     // Use the incremental setText (Sprint 2 fix #4) — preserves tuned glyphs.
     if (wm) {
@@ -617,37 +767,18 @@ wm.makeInteractive();                         // draggable handles + tooltip</co
   reset.addEventListener('click', () => {
     if (!wm) return;
     wm.resetAll();
-    flash('Reset all letters');
+    flash('Letters reset to defaults');
   });
 
   copySvg.addEventListener('click', async () => {
     if (!wm) return;
+    const svg = wm.toSVG();
     try {
-      await navigator.clipboard.writeText(wm.toSVG());
-      flash('Static SVG copied');
+      await navigator.clipboard.writeText(svg);
+      flash('SVG copied');
     } catch {
       flash('Clipboard blocked — see console');
-      console.log(wm.toSVG());
-    }
-  });
-
-  openEm.addEventListener('click', async () => {
-    if (!wm) return;
-    openEm.disabled = true;
-    openEm.textContent = 'Building…';
-    try {
-      const html = await wm.toInteractiveBundle();
-      const blob = new Blob([html], { type: 'text/html' });
-      const url = URL.createObjectURL(blob);
-      window.open(url, '_blank', 'noopener');
-      flash('Embed opened — pure HTML, no CDN');
-      setTimeout(() => URL.revokeObjectURL(url), 30000);
-    } catch (err) {
-      console.error(err);
-      flash('Embed failed — see console');
-    } finally {
-      openEm.disabled = false;
-      openEm.textContent = 'Open interactive embed →';
+      console.log(svg);
     }
   });
 
@@ -660,6 +791,7 @@ wm.makeInteractive();                         // draggable handles + tooltip</co
     curvatureOn = !curvatureOn;
     tCurv.textContent = curvatureOn ? 'on' : 'off';
     tCurv.classList.toggle('on', curvatureOn);
+    tCurv.setAttribute('aria-pressed', String(curvatureOn));
     mount(safeText(input.value));
   });
 
@@ -667,6 +799,7 @@ wm.makeInteractive();                         // draggable handles + tooltip</co
     mouseFollowOn = !mouseFollowOn;
     tMouse.textContent = mouseFollowOn ? 'on' : 'off';
     tMouse.classList.toggle('on', mouseFollowOn);
+    tMouse.setAttribute('aria-pressed', String(mouseFollowOn));
     if (!wm) return;
     if (mouseFollowOn) {
       wm.enableMouseFollow();
