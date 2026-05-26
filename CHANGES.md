@@ -139,9 +139,24 @@ To port back to the original repo: each fix below cites the corresponding file i
 
 ---
 
+## Type-design recommendations batch (2026-05-26)
+
+Implemented from type-design-expert critique (user-approved):
+
+| Priority | Item |
+|----------|------|
+| P0 | `a` `bowlBottomTension`; `e` `bowlSideTension`; `clampAperture()` on `a`/`e`; mouse-follow default `tangentOnly: true` |
+| P1 | Curated `b`, `c`, `m`, `g`; preset-aware `resetAll`/`resetGlyph`; `leftBearing`/`rightBearing` + `advanceWithBearings()`; IBM Plex partial mono via `monoCell` + `monoAdjustedAdvance()` |
+| P2 | `strokeJoin: 'miter'` on `sourceSans` / `bitter`; `capOvershoot` on `h`/`l`/`t`; regression snapshots documented in `docs/snapshot-regression.md` (manual export) |
+| User | `serifLength` on `instrumentSerif` / `bitter` presets (defaults + glyph overrides); stubs in `construct()` for `a`, `e`, `b`, `c`, `m`, `g`, `l` |
+
+**Test in demo:** `npm run dev` → `adjustable-web-type.html` → text `Hello jazz` → presets Instrument Serif / Bitter (serif stubs) → IBM Plex Mono (rhythm) → mouse follow (tangent-only) → Reset letters (preset defaults).
+
+---
+
 ## Deferred — pick up next
 
-1. **Hand-author the remaining 40 letters** with the same Bezier+tangent vocabulary the curated 12 use. The `curvature` tangent is a stopgap; a real parametric `b` will always read better. Author one at a time as needed.
+1. **Hand-author the remaining monoline letters** (not b/c/m/g) with the same Bezier+tangent vocabulary the curated 12 use. The `curvature` tangent is a stopgap; a real parametric `b` will always read better. Author one at a time as needed.
 2. **True LCS in `setText`** for mid-string insertion stability.
 3. **Snapshot tests** of `toSVG()` at default params, one per glyph. Would have caught the CDN-URL regression; will catch future drift.
 4. **In-place DOM mutation during drag** — mutate `path[d]` and `circle[cx/cy]` on the active glyph instead of `innerHTML` wiping the whole layer.
@@ -152,7 +167,11 @@ To port back to the original repo: each fix below cites the corresponding file i
 ## Files in this fork
 
 - `lib/sculpt.js` — single-file improved library (UMD-ish, ~1.1k LOC), drop-in replacement for `@sculpt-lettering/core`.
-- `Adjustable web type.html` — demo page exercising every change: type any word, drag handles, hit "Open interactive embed →" to verify the bundle works end-to-end.
+- `adjustable-web-type.html` — demo page exercising every change: type any word, drag handles, hit **Export code** to download a self-contained interactive HTML bundle.
 - `CHANGES.md` — this file.
 
-To run: open `Adjustable web type.html` in any modern browser. No build step. No package install. The "Open interactive embed →" button proves Sprint 1.2 by opening a freshly-generated self-contained HTML document in a new tab — the embed runs entirely from inlined source, no network.
+To run: `npm run dev` and open `http://127.0.0.1:5173/adjustable-web-type.html`, or open the HTML file directly. No package install required beyond dev tooling. The **Export code** button proves Sprint 1.2 by downloading a freshly-generated self-contained HTML document — the embed runs entirely from inlined source, no network.
+
+### Demo export CTA (2026-05-26)
+
+Stage footer **Export code** button (`#export-code`) calls `Wordmark.toInteractiveBundle()` and triggers a file download (`sculpt-{text-slug}.html`). The bundle inlines `lib/sculpt.js` and embeds the current `toState()` snapshot (text, color, tracking, padding, tuned glyph params, mouse-follow mode). Replaces the prior Copy SVG clipboard action.
