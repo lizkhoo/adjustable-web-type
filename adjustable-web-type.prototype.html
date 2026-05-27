@@ -1,0 +1,1034 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>[PROTOTYPE] Per-preset pipeline routing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bitter:wght@400&family=IBM+Plex+Mono:wght@400&family=Instrument+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600&family=Rubik+Bubbles&family=Source+Sans+3:wght@400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #f6f7f9;
+    --paper-2: #ffffff;
+    --ink: #0a0a0b;
+    --ink-soft: #2a2d32;
+    --muted: #525860;
+    --rule: #d4d8e0;
+    --accent: #1a2f6e;
+    --warn-bg: #fff3cd;
+    --warn-border: #b87a00;
+    --warn-ink: #5a3a00;
+    --sans: "Instrument Sans", system-ui, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--sans); font-size: 14px; }
+
+  .prototype-banner {
+    background: var(--warn-bg);
+    color: var(--warn-ink);
+    border-bottom: 2px solid var(--warn-border);
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 8px 16px;
+    text-align: center;
+  }
+  .prototype-banner strong { color: var(--warn-border); }
+  .prototype-banner a { color: var(--warn-ink); }
+
+  .toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 14px 18px;
+    padding: 14px 20px;
+    background: var(--paper-2);
+    border-bottom: 1px solid var(--rule);
+    font-family: var(--mono);
+    font-size: 11px;
+  }
+  .toolbar label { color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-right: 6px; }
+  .toolbar .group { display: flex; align-items: center; gap: 6px; }
+  .toolbar select, .toolbar input[type="text"] {
+    font-family: var(--mono); font-size: 12px; padding: 4px 6px;
+    border: 1px solid var(--rule); border-radius: 2px; background: var(--paper);
+  }
+  .toolbar input[type="text"] { width: 220px; font-family: var(--sans); font-size: 14px; }
+  .toolbar input[type="color"] { width: 28px; height: 24px; border: 1px solid var(--rule); padding: 0; background: var(--paper); }
+  .toolbar .seg { display: inline-flex; border: 1px solid var(--rule); border-radius: 2px; overflow: hidden; }
+  .toolbar .seg button {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.04em; text-transform: uppercase;
+    padding: 4px 8px; background: var(--paper); border: 0; border-right: 1px solid var(--rule);
+    color: var(--muted); cursor: pointer;
+  }
+  .toolbar .seg button:last-child { border-right: 0; }
+  .toolbar .seg button.on { background: var(--accent); color: var(--paper-2); }
+  .toolbar button.btn {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.05em; text-transform: uppercase;
+    padding: 5px 10px; background: var(--paper); border: 1px solid var(--rule); border-radius: 2px;
+    color: var(--ink-soft); cursor: pointer;
+  }
+
+  .state-panel {
+    margin: 0;
+    padding: 12px 20px;
+    background: #eef1f7;
+    border-bottom: 1px solid var(--rule);
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--ink-soft);
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 4px 24px;
+  }
+  .state-panel .row { display: flex; gap: 8px; }
+  .state-panel .k { color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; min-width: 110px; }
+  .state-panel .v { color: var(--ink); }
+  .state-panel .v.warn { color: var(--warn-border); }
+  .state-panel .v.ok { color: #1f6f3b; }
+
+  .axis-row {
+    padding: 10px 20px;
+    background: var(--paper-2);
+    border-bottom: 1px solid var(--rule);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px;
+    font-family: var(--mono);
+    font-size: 11px;
+    min-height: 44px;
+  }
+  .axis-row[hidden] { display: none; }
+  .axis-row .ax { display: flex; align-items: center; gap: 6px; }
+  .axis-row .ax label { color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+  .axis-row input[type="range"] { width: 120px; accent-color: var(--accent); }
+  .axis-row .empty { color: var(--muted); font-style: italic; }
+
+  .gap-callout, .sketch-callout {
+    margin: 16px 20px 0;
+    padding: 14px 16px;
+    border-radius: 3px;
+    font-family: var(--sans);
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--ink-soft);
+  }
+  .gap-callout { background: #fff7e6; border: 1px solid var(--warn-border); }
+  .sketch-callout { background: #e8f4ea; border: 1px solid #1f6f3b; }
+  .gap-callout[hidden], .sketch-callout[hidden] { display: none; }
+  .gap-callout h4, .sketch-callout h4 { margin: 0 0 6px; font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; }
+  .gap-callout h4 { color: var(--warn-border); }
+  .sketch-callout h4 { color: #1f6f3b; }
+  .gap-callout p, .sketch-callout p { margin: 0 0 6px; }
+  .gap-callout p:last-child, .sketch-callout p:last-child { margin: 0; }
+  .gap-callout code, .sketch-callout code { font-family: var(--mono); font-size: 12px; background: var(--paper-2); border: 1px solid var(--rule); padding: 0 4px; border-radius: 2px; }
+
+  main.stage-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 20px 24px;
+    min-height: 56vh;
+    gap: 24px;
+  }
+  .stage-frame {
+    width: 100%;
+    max-width: 1100px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+  .stage-frame .stage-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    align-self: flex-start;
+  }
+  .stage-frame .stage-label b { color: var(--ink); }
+  .stage-frame .stage-host { width: 100%; display: flex; justify-content: center; }
+  .stage-frame[hidden] { display: none; }
+  #stage svg, #stage-reference svg { display: block; max-width: 100%; height: auto; max-height: min(40vh, 360px); }
+
+  .notes-panel {
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 24px 20px 60px;
+    font-family: var(--sans);
+    color: var(--ink-soft);
+    font-size: 13.5px;
+    line-height: 1.55;
+  }
+  .notes-panel h3 { font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin: 24px 0 8px; }
+  .notes-panel table { border-collapse: collapse; width: 100%; font-size: 12.5px; }
+  .notes-panel th, .notes-panel td { border: 1px solid var(--rule); padding: 6px 8px; text-align: left; vertical-align: top; }
+  .notes-panel th { background: var(--paper-2); font-family: var(--mono); font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+  .notes-panel code { font-family: var(--mono); font-size: 12px; background: var(--paper-2); border: 1px solid var(--rule); padding: 0 4px; border-radius: 2px; }
+  .pill { display: inline-block; font-family: var(--mono); font-size: 10px; padding: 1px 6px; border-radius: 999px; letter-spacing: 0.04em; text-transform: uppercase; }
+  .pill.settled { background: #1f6f3b; color: white; }
+  .pill.tentative { background: var(--warn-border); color: white; }
+</style>
+</head>
+<body>
+
+<div class="prototype-banner">
+  <strong>PROTOTYPE</strong> · adjustable-web-type.prototype.html ·
+  Per-preset pipeline routing — see <a href="docs/handoff-pipeline-prototype.md">handoff doc</a>.
+  Do not merge to main.
+</div>
+
+<div class="toolbar">
+  <div class="group">
+    <label for="text-input">Text</label>
+    <input id="text-input" type="text" value="Hello jazz" spellcheck="false" autocomplete="off">
+  </div>
+  <div class="group">
+    <label for="preset-select">Preset</label>
+    <select id="preset-select">
+      <option value="bubbly">bubbly (Rubik Bubbles)</option>
+      <option value="instrumentSerif">instrumentSerif</option>
+      <option value="sourceSans">sourceSans (Source Sans 3)</option>
+      <option value="bitter">bitter</option>
+      <option value="ibmPlexMono">ibmPlexMono</option>
+    </select>
+  </div>
+  <div class="group">
+    <label>Mode</label>
+    <div class="seg" id="mode-seg" role="radiogroup" aria-label="Prototype mode">
+      <button type="button" data-value="declared" class="on" aria-pressed="true" title="The pipeline this preset declares in PRESET_PIPELINES">Declared</button>
+      <button type="button" data-value="gamma" aria-pressed="false" title="Extended outline-deform with multiple global axes (xHeight, weight, width, serifLength). Non-bubbly only.">Path γ</button>
+      <button type="button" data-value="alpha" aria-pressed="false" title="WOFF outline + per-letter handles. Minimal proof: instrumentSerif × {a, o, l}.">Path α</button>
+    </div>
+  </div>
+  <div class="group">
+    <label for="color-input">Color</label>
+    <input id="color-input" type="color" value="#2a2ae5">
+  </div>
+  <div class="group">
+    <button id="reset-btn" type="button" class="btn">Reset handles</button>
+  </div>
+</div>
+
+<section class="state-panel" aria-label="Current pipeline state">
+  <div class="row"><span class="k">Preset</span><span class="v" id="state-preset">—</span></div>
+  <div class="row"><span class="k">Declared</span><span class="v" id="state-declared">—</span></div>
+  <div class="row"><span class="k">Active</span><span class="v" id="state-active">—</span></div>
+  <div class="row"><span class="k">Reason</span><span class="v" id="state-reason">—</span></div>
+  <div class="row"><span class="k">Surfaced controls</span><span class="v" id="state-controls">—</span></div>
+  <div class="row"><span class="k">Confidence</span><span class="v" id="state-confidence">—</span></div>
+</section>
+
+<div id="axis-row" class="axis-row" aria-label="Outline axis controls" hidden></div>
+
+<div id="gap-callout" class="gap-callout" hidden>
+  <h4>Declared mode (non-bubbly): the parametric Wordmark you'd ship today</h4>
+  <p>
+    Hand-authored Beziers from <code>lib/sculpt.js</code>'s glyph registry, tuned by the preset's <code>defaults</code> + <code>glyphParams</code>. The WOFF outline above is rendered for comparison — note that the parametric output below does <em>not</em> derive from it. That mismatch is the architectural problem.
+  </p>
+  <p>
+    Try the two candidate fixes: <strong>Path γ</strong> (extended outline-deform: real WOFF + multi-axis global sliders) and <strong>Path α</strong> (WOFF + per-letter handles, minimal proof on <code>instrumentSerif</code> × {a, o, l}).
+  </p>
+</div>
+
+<div id="gamma-callout" class="sketch-callout" hidden>
+  <h4>Path γ — extended outline-deform (real WOFF + multi-axis sliders)</h4>
+  <p>
+    Starting shape is the WOFF outline. Sliders below deform it globally — every letter responds together.
+    <code>width</code> and <code>serifLength</code> are real path-level deformations (already in <code>lib/sculpt.js</code>).
+    <code>xHeight</code> (vertical scale, baseline-pivoted) and <code>weight</code> (outline dilation via stroke widening) are <em>prototype post-processing</em> on the rendered SVG — production γ would build these into the lib's <code>applyPresetAxesToCommands</code>.
+  </p>
+  <p>
+    Verdict to bring back: does global multi-axis feel like enough control, or do the letters need per-letter precision?
+  </p>
+</div>
+
+<div id="alpha-callout" class="sketch-callout" hidden>
+  <h4>Path α — WOFF + per-letter anatomy handles (full implementation)</h4>
+  <p>
+    Starting shape is the WOFF outline. <strong>Every letter</strong> in the wordmark exposes the preset's handle vocabulary at anchor positions derived from each glyph's bounding box:
+  </p>
+  <ul style="margin: 0 0 8px 18px;">
+    <li><code>instrumentSerif</code> / <code>bitter</code>: <code>height</code> (top), <code>width</code> (right), <code>serifLength</code> (bottom-right, omitted on round-bottom letters like o/c/e/s/g), <code>weight</code> (left)</li>
+    <li><code>sourceSans</code>: <code>height</code>, <code>width</code>, <code>weight</code></li>
+    <li><code>ibmPlexMono</code>: <code>height</code>, <code>width</code>, <code>weight</code> (note: dragging width breaks the mono cell invariant — that's a known tension to bring back)</li>
+  </ul>
+  <p>
+    Height handle's label adapts per letter: <code>cap-height</code> for uppercase, <code>ascender</code> for b/d/f/h/k/l/t, <code>x-height</code> otherwise. Hover any handle to see <em>which axis on which letter</em> in the tooltip.
+  </p>
+  <p>
+    Transforms in this prototype: <code>scaleY-base</code> (pivot at baseline), <code>scaleX-left</code> (pivot at glyph left), <code>weight-stroke</code> (per-glyph stroke widening). Production α needs real outline math — region-clipped scale for x-height (scale only above baseline below cap-height), translation of just the serif endpoints, true offset-path dilation for weight.
+  </p>
+  <p id="alpha-scope-warning" style="color: var(--warn-border); font-family: var(--mono); font-size: 11px;" hidden></p>
+</div>
+
+<main class="stage-wrap">
+  <div id="frame-reference" class="stage-frame" hidden>
+    <span class="stage-label"><b>WOFF reference</b> — static <code>OutlineWordmark</code>, no handles (this is what parametric should start from)</span>
+    <div class="stage-host"><div id="stage-reference"></div></div>
+  </div>
+  <div id="frame-main" class="stage-frame">
+    <span class="stage-label" id="stage-main-label"><b>Active pipeline</b></span>
+    <div class="stage-host"><div id="stage"></div></div>
+  </div>
+</main>
+
+<section class="notes-panel">
+  <h3>Routing table — locked 2026-05-26</h3>
+  <table>
+    <thead>
+      <tr><th>Preset</th><th>Pipeline</th><th>Reason</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>bubbly</code></td><td>outline-deform</td><td>Shape-novelty mood; the joke <em>is</em> the outline.</td></tr>
+      <tr><td><code>instrumentSerif</code></td><td>parametric</td><td>Anatomy-driven; serif/x-height/bowl handles are the point.</td></tr>
+      <tr><td><code>bitter</code></td><td>parametric</td><td>Anatomy-driven (slab terminals = serif anatomy). <code>serifLength</code> per glyph + <code>strokeJoin: miter</code>.</td></tr>
+      <tr><td><code>sourceSans</code></td><td>parametric</td><td>Anatomy-driven; per-letter <code>archWidth</code>/<code>bowlWidth</code>/<code>xHeight</code> beat a single global <code>width</code>.</td></tr>
+      <tr><td><code>ibmPlexMono</code></td><td>parametric</td><td>Anatomy-driven; <code>monoCell</code> constraint + per-glyph proportions are the interesting tunables.</td></tr>
+    </tbody>
+  </table>
+  <p><strong>Rule:</strong> shape-novelty → outline-deform; everything in the readable-text-face family → parametric.</p>
+
+  <h3>Two candidate paths, both playable above</h3>
+  <p>The routing decision is locked. The open question is <em>how to implement the parametric pipeline for the four anatomy-driven presets</em>. Use the <strong>Mode</strong> control to flip between three views of the same wordmark:</p>
+  <ul>
+    <li><strong>Declared</strong> — what would ship today. Hand-authored Bezier registry (the architectural gap: WOFF doesn't participate in the starting shape).</li>
+    <li><strong>Path γ</strong> — extended outline-deform. Real WOFF + multiple global axis sliders (xHeight, weight, width, serifLength per the handoff table). All letters respond together.</li>
+    <li><strong>Path α</strong> — WOFF + per-letter handles, minimal proof on <code>instrumentSerif</code> × {a, o, l}. Other letters in the wordmark stay undeformed.</li>
+  </ul>
+
+  <h3>Path γ deformation details</h3>
+  <table>
+    <thead><tr><th>Axis</th><th>How it's implemented in this prototype</th><th>Production target</th></tr></thead>
+    <tbody>
+      <tr><td><code>width</code></td><td><code>wm.setAxis('width', v)</code> — already in <code>lib/sculpt.js</code></td><td>Same.</td></tr>
+      <tr><td><code>serifLength</code></td><td><code>wm.setAxis('serifLength', v)</code> — already in <code>lib/sculpt.js</code></td><td>Same.</td></tr>
+      <tr><td><code>xHeight</code></td><td>Post-render SVG transform <code>scale(1, sy)</code> per glyph, pivoted at baseline</td><td>Path-level deformation in <code>applyPresetAxesToCommands</code>; clip the scale to the region between baseline and x-height (preserve cap-height/ascender).</td></tr>
+      <tr><td><code>weight</code></td><td>Post-render: add stroke of the fill color, paint-order stroke-fill, width = v</td><td>Real outline dilation (offset path / Minkowski sum) honoring stem-contrast.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Path α handle vocabulary per preset</h3>
+  <table>
+    <thead><tr><th>Preset</th><th>Per-letter handles</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><code>instrumentSerif</code></td>
+        <td>height, width, serifLength*, weight</td>
+        <td>*serifLength omitted on round-bottom letters (o/c/e/s/g/O/C/S/Q/G)</td>
+      </tr>
+      <tr>
+        <td><code>bitter</code></td>
+        <td>height, width, serifLength*, weight</td>
+        <td>Same skip rule. Production should also flip stroke-linejoin to miter to honor the slab look.</td>
+      </tr>
+      <tr>
+        <td><code>sourceSans</code></td>
+        <td>height, width, weight</td>
+        <td>—</td>
+      </tr>
+      <tr>
+        <td><code>ibmPlexMono</code></td>
+        <td>height, width, weight</td>
+        <td>Dragging width on a mono breaks the mono cell visually — surfacing as a question for the grilling session.</td>
+      </tr>
+    </tbody>
+  </table>
+  <p>The height handle's label adapts per letter category: <code>cap-height</code> for uppercase, <code>ascender</code> for b/d/f/h/k/l/t, <code>x-height</code> otherwise. Descenders (g/j/p/q/y) currently scale through a single x-height handle — production α may want a dedicated descenderDepth.</p>
+
+  <h3>Path α implementation notes for production</h3>
+  <ul>
+    <li><strong>x-height handle</strong>: prototype scales the entire glyph in Y, pivoted at baseline. Production should clip the scaled region to (baseline, x-height) so the ascender/cap-height stays fixed. Requires path-level region splitting.</li>
+    <li><strong>width handle</strong>: prototype scales the entire glyph in X, pivoted at left edge. Production should preserve stem thickness (scale only the bowl/counter regions, not the stems). Requires anatomy-aware path partitioning.</li>
+    <li><strong>serifLength handle</strong>: prototype scales X (same as width with a different anchor visualization). Production should translate only the serif endpoint anchors along the baseline. Requires identifying serif anchor points on the outline.</li>
+    <li><strong>weight handle</strong>: prototype uses SVG stroke widening on the existing fill. Production should perform real outline offset (Minkowski sum) so contrast is preserved.</li>
+    <li><strong>descenderDepth</strong>: not exposed yet. Should be a second height-family handle that scales only y &gt; 0 (below baseline).</li>
+    <li><strong>Mono width tension</strong>: dragging width on <code>ibmPlexMono</code> breaks the mono cell. Either lock width on mono, or let the user opt out of mono per-letter, or add a wordmark-level mono toggle.</li>
+  </ul>
+
+  <h3>Not in scope here</h3>
+  <ul>
+    <li>The <code>none</code> preset (parametric-only fallback) — removed from this picker.</li>
+    <li>Any change to <code>lib/sculpt.js</code>. Path γ's xHeight/weight and all of Path α live as SVG post-processing in this prototype only.</li>
+  </ul>
+</section>
+
+<script src="lib/sculpt.js"></script>
+<script type="module">
+import * as opentype from 'opentype.js';
+
+const SL = window.SculptLettering;
+SL.setOpentypeParser(opentype);
+
+// ───────────────────────────────────────────────────────────────────────
+// THE ROUTING TABLE UNDER TEST.
+// This is what we'd promote to a `pipeline:` field on each preset in
+// lib/sculpt.js once the grilling session confirms the choices.
+// 'outline-deform' → DeformableOutlineWordmark
+// 'parametric'     → Wordmark
+// ───────────────────────────────────────────────────────────────────────
+// Locked by the 2026-05-26 grilling session: shape-novelty → outline-deform;
+// anatomy-driven (readable text faces) → parametric.
+const PRESET_PIPELINES = {
+  bubbly:          { pipeline: 'outline-deform', confidence: 'locked' },
+  instrumentSerif: { pipeline: 'parametric',     confidence: 'locked' },
+  sourceSans:      { pipeline: 'parametric',     confidence: 'locked' },
+  bitter:          { pipeline: 'parametric',     confidence: 'locked' },
+  ibmPlexMono:     { pipeline: 'parametric',     confidence: 'locked' },
+};
+
+// ───────────────────────────────────────────────────────────────────────
+// Path γ axis table per preset (from handoff doc)
+// ───────────────────────────────────────────────────────────────────────
+const PATH_GAMMA_AXES = {
+  instrumentSerif: ['serifLength', 'xHeight', 'weight', 'width'],
+  bitter:          ['serifLength', 'xHeight', 'weight', 'width'],
+  sourceSans:      ['width', 'xHeight', 'weight'],
+  ibmPlexMono:     ['width', 'xHeight', 'weight'],
+};
+
+const AXIS_DEFS = {
+  width:       { min: 0.5, max: 1.8, def: 1.0, step: 0.01, label: 'Width',        libSupported: true  },
+  serifLength: { min: 0.0, max: 1.5, def: 1.0, step: 0.01, label: 'Serif length', libSupported: true  },
+  xHeight:     { min: 0.7, max: 1.5, def: 1.0, step: 0.01, label: 'X-height',     libSupported: false },
+  weight:      { min: 0,   max: 36,  def: 0,   step: 0.5,  label: 'Weight',       libSupported: false },
+};
+
+// Path α — full per-letter handle vocabulary.
+// Letter category drives the height handle's label (x-height / ascender / cap-height).
+const LETTER_CATEGORY = {
+  // Lowercase short (x-height only)
+  a:'short', c:'short', e:'short', i:'short', m:'short', n:'short',
+  o:'short', r:'short', s:'short', u:'short', v:'short', w:'short',
+  x:'short', z:'short',
+  // Lowercase ascenders
+  b:'ascender', d:'ascender', f:'ascender', h:'ascender',
+  k:'ascender', l:'ascender', t:'ascender',
+  // Lowercase descenders — treated as short for the height gesture (single scaleY-base)
+  g:'descender', j:'descender', p:'descender', q:'descender', y:'descender',
+};
+
+// Letters with rounded baselines (no real serif): skip serifLength on serif presets.
+const NO_BASELINE_SERIF = new Set(['o', 'O', 'c', 'C', 'e', 'g', 'G', 's', 'S', 'Q']);
+
+// Per-preset handle vocabulary (mirrors the Path γ axis table from the handoff).
+const ALPHA_HANDLES_BY_PRESET = {
+  instrumentSerif: ['height', 'width', 'serifLength', 'weight'],
+  bitter:          ['height', 'width', 'serifLength', 'weight'],
+  sourceSans:      ['height', 'width', 'weight'],
+  ibmPlexMono:     ['height', 'width', 'weight'],
+};
+
+function alphaCategoryFor(char) {
+  if (char >= 'A' && char <= 'Z') return 'upper';
+  return LETTER_CATEGORY[char] || 'short';
+}
+
+function alphaHeightLabel(category) {
+  if (category === 'upper')    return { id: 'capHeight',      label: 'cap-height' };
+  if (category === 'ascender') return { id: 'ascenderHeight', label: 'ascender' };
+  return                              { id: 'xHeight',        label: 'x-height' };
+}
+
+function alphaSpecsFor(char, presetKey) {
+  const allowed = ALPHA_HANDLES_BY_PRESET[presetKey];
+  if (!allowed) return [];
+  const out = [];
+  const h = alphaHeightLabel(alphaCategoryFor(char));
+  if (allowed.includes('height')) {
+    out.push({ id: h.id, label: h.label, anchor: 'top', transform: 'scaleY-base' });
+  }
+  if (allowed.includes('width')) {
+    out.push({ id: 'width', label: 'width', anchor: 'right', transform: 'scaleX-left' });
+  }
+  if (allowed.includes('serifLength') && !NO_BASELINE_SERIF.has(char)) {
+    out.push({ id: 'serifLength', label: 'serif', anchor: 'bottomRight', transform: 'scaleX-left' });
+  }
+  if (allowed.includes('weight')) {
+    out.push({ id: 'weight', label: 'weight', anchor: 'left', transform: 'weight-stroke' });
+  }
+  return out;
+}
+
+const SVG_NS = 'http://www.w3.org/2000/svg';
+
+// ───────────────────────────────────────────────────────────────────────
+// DOM
+// ───────────────────────────────────────────────────────────────────────
+const stage         = document.getElementById('stage');
+const stageRef      = document.getElementById('stage-reference');
+const frameRef      = document.getElementById('frame-reference');
+const stageMainLabel = document.getElementById('stage-main-label');
+const gapCallout    = document.getElementById('gap-callout');
+const gammaCallout  = document.getElementById('gamma-callout');
+const alphaCallout  = document.getElementById('alpha-callout');
+const alphaScopeWarning = document.getElementById('alpha-scope-warning');
+const textInput     = document.getElementById('text-input');
+const presetSelect  = document.getElementById('preset-select');
+const colorInput    = document.getElementById('color-input');
+const resetBtn      = document.getElementById('reset-btn');
+const modeSeg       = document.getElementById('mode-seg');
+const axisRow       = document.getElementById('axis-row');
+const statePreset   = document.getElementById('state-preset');
+const stateDeclared = document.getElementById('state-declared');
+const stateActive   = document.getElementById('state-active');
+const stateReason   = document.getElementById('state-reason');
+const stateControls = document.getElementById('state-controls');
+const stateConfidence = document.getElementById('state-confidence');
+
+// ───────────────────────────────────────────────────────────────────────
+// State
+// ───────────────────────────────────────────────────────────────────────
+let currentPreset = 'bubbly';
+let currentColor  = '#2a2ae5';
+let mode = 'declared';  // 'declared' | 'gamma' | 'alpha'
+let wm = null;
+let wmRef = null;
+let mountToken = 0;
+let gammaAxisValues = {};
+
+function safeText(t) {
+  const allowed = new Set('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz '.split(''));
+  const f = Array.from(t).filter((c) => allowed.has(c)).join('');
+  return f || 'Hello jazz';
+}
+
+function isBubbly() { return currentPreset === 'bubbly'; }
+function alphaInScope() { return mode === 'alpha' && !isBubbly(); }
+
+// What's actually mounted, taking fallbacks into account.
+function effectiveMode() {
+  if (mode === 'gamma' && isBubbly()) return 'declared';
+  if (mode === 'alpha' && isBubbly()) return 'declared';
+  return mode;
+}
+
+function effectivePipeline() {
+  const m = effectiveMode();
+  if (m === 'declared') return PRESET_PIPELINES[currentPreset].pipeline;
+  return 'outline-deform';
+}
+
+// Modes where the prototype overlays its own handles on the lib's SVG.
+// In these modes we don't call wm.makeInteractive and re-mount instead of setText.
+function isOverlayActive() {
+  const m = effectiveMode();
+  return (m === 'gamma' || m === 'alpha');
+}
+
+function buildParametricPreset() {
+  const p = SL.presets[currentPreset];
+  if (!p) return undefined;
+  const out = {
+    name: p.name,
+    fontRef: p.fontRef,
+    defaults: Object.assign({}, p.defaults),
+    glyphParams: {},
+  };
+  if (p.glyphParams) {
+    for (const ch of Object.keys(p.glyphParams)) {
+      out.glyphParams[ch] = Object.assign({}, p.glyphParams[ch]);
+    }
+  }
+  if (p.monoCell)   out.monoCell = p.monoCell;
+  if (p.strokeJoin) out.strokeJoin = p.strokeJoin;
+  return out;
+}
+
+function describeControls() {
+  const m = effectiveMode();
+  if (m === 'declared') {
+    if (isBubbly()) {
+      const axes = (SL.presets.bubbly && SL.presets.bubbly.axes) || [];
+      return axes.map((a) => a.id).join(', ') || 'bubbliness';
+    }
+    const p = SL.presets[currentPreset];
+    const glyphKeys = p && p.glyphParams ? Object.keys(p.glyphParams) : [];
+    return glyphKeys.length
+      ? `per-letter parametric handles on: ${glyphKeys.join(' ')}`
+      : 'monoline schema only';
+  }
+  if (m === 'gamma') {
+    return PATH_GAMMA_AXES[currentPreset].join(', ') + ' (global sliders)';
+  }
+  // alpha — every letter gets the preset's handle vocabulary
+  const allowed = ALPHA_HANDLES_BY_PRESET[currentPreset] || [];
+  return `per-letter handles: ${allowed.join(', ')} on every glyph`;
+}
+
+function updateStatePanel(reason) {
+  const declared = PRESET_PIPELINES[currentPreset].pipeline;
+  const confidence = PRESET_PIPELINES[currentPreset].confidence;
+  const m = effectiveMode();
+  statePreset.textContent = currentPreset;
+  stateDeclared.textContent = declared;
+  stateActive.textContent = effectivePipeline() + ' · mode=' + m + (m !== mode ? ' (fallback)' : '');
+  stateActive.className = 'v ' + (m === 'declared' ? 'ok' : 'warn');
+  stateReason.textContent = reason;
+  stateControls.textContent = describeControls();
+  stateConfidence.textContent = confidence;
+  stateConfidence.className = 'v ok';
+}
+
+function renderAxisRow() {
+  axisRow.innerHTML = '';
+  const m = effectiveMode();
+
+  // Declared mode for an outline-deform preset (i.e. bubbly): show the preset's lib-declared axes.
+  if (m === 'declared' && effectivePipeline() === 'outline-deform') {
+    const axes = (SL.presets[currentPreset] && SL.presets[currentPreset].axes) || [];
+    if (!axes.length) { axisRow.hidden = true; return; }
+    axisRow.hidden = false;
+    axes.forEach((ax) => addLibAxisSlider(ax));
+    return;
+  }
+
+  // γ mode: show ALL gamma axes for this preset (lib axes via setAxis, prototype axes via post-process)
+  if (m === 'gamma') {
+    axisRow.hidden = false;
+    const axisIds = PATH_GAMMA_AXES[currentPreset] || [];
+    axisIds.forEach((axisId) => addGammaSlider(axisId));
+    return;
+  }
+
+  axisRow.hidden = true;
+}
+
+function addLibAxisSlider(ax) {
+  const wrap = document.createElement('div');
+  wrap.className = 'ax';
+  const label = document.createElement('label');
+  label.setAttribute('for', 'axis-' + ax.id);
+  label.textContent = ax.label || ax.id;
+  const range = document.createElement('input');
+  range.type = 'range';
+  range.id = 'axis-' + ax.id;
+  range.min = String(ax.min);
+  range.max = String(ax.max);
+  range.step = '0.01';
+  const v = wm && wm.axisValues && wm.axisValues[ax.id] != null ? wm.axisValues[ax.id] : ax.default;
+  range.value = String(v);
+  range.addEventListener('input', () => {
+    if (wm && wm.setAxis) wm.setAxis(ax.id, parseFloat(range.value));
+  });
+  wrap.appendChild(label);
+  wrap.appendChild(range);
+  axisRow.appendChild(wrap);
+}
+
+function addGammaSlider(axisId) {
+  const def = AXIS_DEFS[axisId];
+  if (!def) return;
+  const wrap = document.createElement('div');
+  wrap.className = 'ax';
+  const label = document.createElement('label');
+  label.setAttribute('for', 'gamma-axis-' + axisId);
+  label.textContent = def.label;
+  const range = document.createElement('input');
+  range.type = 'range';
+  range.id = 'gamma-axis-' + axisId;
+  range.min = String(def.min);
+  range.max = String(def.max);
+  range.step = String(def.step);
+  range.value = String(gammaAxisValues[axisId] != null ? gammaAxisValues[axisId] : def.def);
+  range.addEventListener('input', () => {
+    const v = parseFloat(range.value);
+    gammaAxisValues[axisId] = v;
+    if (!wm) return;
+    if (def.libSupported && wm.setAxis) {
+      wm.setAxis(axisId, v);  // wm._render is hooked to re-apply post-process at end
+    } else {
+      applyPathGammaPostProcess(wm, gammaAxisValues);
+    }
+  });
+  wrap.appendChild(label);
+  wrap.appendChild(range);
+  axisRow.appendChild(wrap);
+}
+
+async function mount() {
+  const token = ++mountToken;
+  const text = safeText(textInput.value);
+  const declared = PRESET_PIPELINES[currentPreset].pipeline;
+
+  // Resolve mode → effective rendering decision
+  const m = effectiveMode();
+  let reason;
+  if (mode === 'declared') {
+    reason = `preset declares "${declared}"`;
+  } else if (mode === 'gamma') {
+    reason = isBubbly()
+      ? `γ n/a for bubbly — falling back to declared "${declared}"`
+      : 'mode=γ — extended outline-deform on this preset';
+  } else { // alpha
+    reason = isBubbly()
+      ? `α n/a for bubbly — falling back to declared "${declared}"`
+      : `mode=α — per-letter handles on every glyph (${ALPHA_HANDLES_BY_PRESET[currentPreset].join(', ')})`;
+  }
+  updateStatePanel(reason);
+
+  const pipeline = effectivePipeline();
+  const declaredParaNonBubbly = m === 'declared' && !isBubbly() && pipeline === 'parametric';
+
+  // Callouts
+  gapCallout.hidden    = !declaredParaNonBubbly;
+  gammaCallout.hidden  = m !== 'gamma';
+  alphaCallout.hidden  = m !== 'alpha';
+  frameRef.hidden      = !declaredParaNonBubbly;
+
+  // α handle density note
+  if (m === 'alpha') {
+    const letters = Array.from(text).filter((c) => c !== ' ');
+    const handlesPerLetter = ALPHA_HANDLES_BY_PRESET[currentPreset].length;
+    alphaScopeWarning.hidden = false;
+    alphaScopeWarning.textContent = `${letters.length} letters × up to ${handlesPerLetter} handles = up to ${letters.length * handlesPerLetter} draggable dots on the canvas.`;
+  } else {
+    alphaScopeWarning.hidden = true;
+  }
+
+  // Stage label
+  if (declaredParaNonBubbly) {
+    stageMainLabel.innerHTML = '<b>Parametric Wordmark</b> — hand-authored Beziers + per-letter handles (current implementation)';
+  } else if (m === 'gamma') {
+    stageMainLabel.innerHTML = '<b>Path γ — extended outline-deform</b> — WOFF outline + multi-axis global sliders';
+  } else if (m === 'alpha') {
+    stageMainLabel.innerHTML = '<b>Path α — WOFF + per-letter handles</b> — drag the orange dots on individual letters';
+  } else if (pipeline === 'outline-deform') {
+    stageMainLabel.innerHTML = '<b>DeformableOutlineWordmark</b> — WOFF outline + bubbliness axis';
+  } else {
+    stageMainLabel.innerHTML = '<b>Wordmark</b> — parametric';
+  }
+
+  stage.innerHTML = '<p style="font-family:var(--mono);font-size:12px;color:var(--muted)">Loading…</p>';
+  if (declaredParaNonBubbly) stageRef.innerHTML = '<p style="font-family:var(--mono);font-size:12px;color:var(--muted)">Loading WOFF reference…</p>';
+
+  try {
+    if (pipeline === 'outline-deform') {
+      wm = await SL.DeformableOutlineWordmark.create(text, {
+        presetKey: currentPreset,
+        color: currentColor,
+        tracking: 12,
+        padding: 64,
+      });
+      wmRef = null;
+    } else {
+      wm = new SL.Wordmark(text, {
+        preset: buildParametricPreset(),
+        color: currentColor,
+        tracking: 12,
+        padding: 64,
+      });
+      try {
+        wmRef = await SL.OutlineWordmark.create(text, {
+          presetKey: currentPreset,
+          color: currentColor,
+          tracking: 12,
+          padding: 64,
+        });
+      } catch (refErr) {
+        console.warn('WOFF reference failed to load:', refErr);
+        wmRef = null;
+      }
+    }
+  } catch (err) {
+    if (token !== mountToken) return;
+    console.error(err);
+    stage.innerHTML = '<p style="font-family:var(--mono);color:#b42318">Mount failed — see console.</p>';
+    return;
+  }
+  if (token !== mountToken) return;
+
+  stage.innerHTML = '';
+  wm.mount(stage);
+
+  if (m === 'gamma') {
+    // Seed γ axis values from defaults for this preset
+    gammaAxisValues = {};
+    PATH_GAMMA_AXES[currentPreset].forEach((id) => { gammaAxisValues[id] = AXIS_DEFS[id].def; });
+    hookGammaRender(wm);
+    applyPathGammaPostProcess(wm, gammaAxisValues);
+    // Don't call makeInteractive — preset-level lib handles aren't the gesture we're showing here
+  } else if (m === 'alpha') {
+    attachPathAlphaHandles(wm);
+  } else {
+    wm.makeInteractive();
+  }
+
+  stageRef.innerHTML = '';
+  if (declaredParaNonBubbly && wmRef) {
+    wmRef.mount(stageRef);
+  } else if (declaredParaNonBubbly) {
+    stageRef.innerHTML = '<p style="font-family:var(--mono);font-size:12px;color:#b42318">WOFF reference unavailable for this preset — see console.</p>';
+  }
+
+  renderAxisRow();
+}
+
+// ───────────────────────────────────────────────────────────────────────
+// Path γ — extended outline-deform.
+// Lib-supported axes (width, serifLength) drive wm.setAxis directly.
+// Prototype-only axes (xHeight, weight) are applied as SVG post-processing
+// after each wm._render() call: xHeight = scale Y about baseline,
+// weight = outline dilation via stroke widening.
+// ───────────────────────────────────────────────────────────────────────
+function hookGammaRender(wm) {
+  if (wm._gammaHooked) return;
+  const orig = wm._render.bind(wm);
+  wm._render = function () {
+    orig();
+    applyPathGammaPostProcess(wm, gammaAxisValues);
+  };
+  wm._gammaHooked = true;
+}
+
+function applyPathGammaPostProcess(wm, axes) {
+  if (!wm.glyphLayer) return;
+  const sy = axes.xHeight != null ? axes.xHeight : 1;
+  const w  = axes.weight  != null ? axes.weight  : 0;
+  Array.from(wm.glyphLayer.children).forEach((outerG) => {
+    let wrap = outerG.querySelector(':scope > g.gamma-wrap');
+    if (!wrap) {
+      wrap = document.createElementNS(SVG_NS, 'g');
+      wrap.setAttribute('class', 'gamma-wrap');
+      const moved = Array.from(outerG.children);
+      moved.forEach((c) => wrap.appendChild(c));
+      outerG.appendChild(wrap);
+    }
+    // xHeight: scale Y about the glyph's local origin (which is baseline)
+    wrap.setAttribute('transform', `scale(1 ${sy})`);
+    // weight: outline dilation via stroke
+    wrap.querySelectorAll('path').forEach((p) => {
+      if (w > 0) {
+        p.setAttribute('stroke', wm.color);
+        p.setAttribute('stroke-width', String(w));
+        p.setAttribute('paint-order', 'stroke fill');
+        p.setAttribute('stroke-linejoin', 'round');
+        p.setAttribute('stroke-linecap', 'round');
+      } else {
+        p.removeAttribute('stroke');
+        p.removeAttribute('stroke-width');
+        p.removeAttribute('paint-order');
+        p.removeAttribute('stroke-linejoin');
+        p.removeAttribute('stroke-linecap');
+      }
+    });
+  });
+}
+
+// ───────────────────────────────────────────────────────────────────────
+// Path α — WOFF + per-letter handles. Full implementation: every letter
+// in every non-bubbly preset gets the preset's handle vocabulary at
+// anchor positions derived from each glyph's rendered bounding box.
+// Transforms:
+//   scaleY-base   — vertical scale, pivoted at baseline (local y=0)
+//   scaleX-left   — horizontal scale, pivoted at the glyph's left edge
+//   weight-stroke — outline dilation via stroke widening on the glyph's paths
+// ───────────────────────────────────────────────────────────────────────
+function attachPathAlphaHandles(wm) {
+  if (!wm.svgEl || !wm.glyphLayer) return;
+  const layout = wm._layoutCache;
+  if (!layout) return;
+  const baselineY = wm.padding + layout.maxAscent;
+  const presetKey = currentPreset;
+
+  // Wrap each glyph's children in a transformable <g>.
+  const outerGroups = Array.from(wm.glyphLayer.children);
+  const wraps = [];
+  outerGroups.forEach((outerG) => {
+    const wrap = document.createElementNS(SVG_NS, 'g');
+    wrap.setAttribute('class', 'alpha-wrap');
+    while (outerG.firstChild) wrap.appendChild(outerG.firstChild);
+    outerG.appendChild(wrap);
+    wraps.push(wrap);
+  });
+
+  const overlay = document.createElementNS(SVG_NS, 'g');
+  overlay.setAttribute('class', 'alpha-handles');
+  wm.svgEl.appendChild(overlay);
+
+  const HANDLE_R = 7;
+  const STEM = '#ff7a00';
+  const state = wm.glyphs.map(() => ({})); // per-letter: { handleId: value }
+
+  wm.glyphs.forEach((g, i) => {
+    const placed = layout.placed[i];
+    const wrap = wraps[i];
+    if (!placed || !wrap) return;
+    if (g.character === ' ') return;
+    const specs = alphaSpecsFor(g.character, presetKey);
+    if (!specs.length) return;
+    const bb = wrap.getBBox();
+    if (!bb || !isFinite(bb.width) || bb.width <= 0) return;
+
+    const left   = placed.x + bb.x;
+    const right  = placed.x + bb.x + bb.width;
+    const cx     = placed.x + bb.x + bb.width / 2;
+    const top    = baselineY + bb.y;
+    const midY   = baselineY + bb.y + bb.height / 2;
+    const bottom = baselineY + bb.y + bb.height;
+
+    specs.forEach((s) => {
+      state[i][s.id] = s.transform === 'weight-stroke' ? 0 : 1;
+      let hx, hy, cursor;
+      if (s.anchor === 'top')              { hx = cx;         hy = top - 18;    cursor = 'ns-resize'; }
+      else if (s.anchor === 'right')       { hx = right + 18; hy = midY;        cursor = 'ew-resize'; }
+      else if (s.anchor === 'left')        { hx = left - 18;  hy = midY;        cursor = 'ew-resize'; }
+      else if (s.anchor === 'bottomRight') { hx = right + 12; hy = bottom + 14; cursor = 'ew-resize'; }
+      else                                  { hx = cx;         hy = top - 18;    cursor = 'ns-resize'; }
+      addHandle(hx, hy, s, i, cursor, g.character);
+    });
+  });
+
+  function addHandle(x, y, s, glyphIndex, cursor, char) {
+    const c = document.createElementNS(SVG_NS, 'circle');
+    c.setAttribute('cx', String(x));
+    c.setAttribute('cy', String(y));
+    c.setAttribute('r', String(HANDLE_R));
+    c.setAttribute('fill', '#fff');
+    c.setAttribute('stroke', STEM);
+    c.setAttribute('stroke-width', '1.5');
+    c.setAttribute('cursor', cursor);
+    c.setAttribute('style', 'touch-action: none');
+    const title = document.createElementNS(SVG_NS, 'title');
+    title.textContent = `${s.label} on '${char}'`;
+    c.appendChild(title);
+    overlay.appendChild(c);
+    wireDrag(c, s, glyphIndex);
+  }
+
+  function wireDrag(handle, s, glyphIndex) {
+    let startX, startY, startV, captured = null;
+    handle.addEventListener('pointerdown', (ev) => {
+      ev.preventDefault();
+      startX = ev.clientX; startY = ev.clientY;
+      const defV = s.transform === 'weight-stroke' ? 0 : 1;
+      startV = state[glyphIndex][s.id] != null ? state[glyphIndex][s.id] : defV;
+      captured = ev.pointerId;
+      try { handle.setPointerCapture(captured); } catch {}
+    });
+    handle.addEventListener('pointermove', (ev) => {
+      if (captured == null) return;
+      let v;
+      if (s.transform === 'scaleY-base') {
+        const dy = startY - ev.clientY;          // drag up = grow
+        v = clamp(startV + dy / 80, 0.4, 2.4);
+      } else if (s.transform === 'scaleX-left') {
+        const dx = ev.clientX - startX;          // drag right = grow
+        v = clamp(startV + dx / 80, 0.4, 2.4);
+      } else {                                    // weight-stroke
+        const dx = ev.clientX - startX;          // drag right = heavier
+        v = clamp(startV + dx / 6, 0, 40);
+      }
+      state[glyphIndex][s.id] = v;
+      applyTransform(glyphIndex);
+    });
+    function end() {
+      if (captured == null) return;
+      try { handle.releasePointerCapture(captured); } catch {}
+      captured = null;
+    }
+    handle.addEventListener('pointerup', end);
+    handle.addEventListener('pointercancel', end);
+  }
+
+  function applyTransform(i) {
+    const wrap = wraps[i];
+    if (!wrap) return;
+    const specs = alphaSpecsFor(wm.glyphs[i].character, presetKey);
+    if (!specs.length) return;
+    const bb = wrap.getBBox();
+    let sx = 1, sy = 1, weight = 0;
+    specs.forEach((s) => {
+      const def = s.transform === 'weight-stroke' ? 0 : 1;
+      const v = state[i][s.id] != null ? state[i][s.id] : def;
+      if (s.transform === 'scaleY-base') sy *= v;
+      else if (s.transform === 'scaleX-left') sx *= v;
+      else if (s.transform === 'weight-stroke') weight = v;
+    });
+    wrap.setAttribute(
+      'transform',
+      `translate(${bb.x} 0) scale(${sx} ${sy}) translate(${-bb.x} 0)`
+    );
+    wrap.querySelectorAll('path').forEach((p) => {
+      if (weight > 0) {
+        p.setAttribute('stroke', wm.color);
+        p.setAttribute('stroke-width', String(weight));
+        p.setAttribute('paint-order', 'stroke fill');
+        p.setAttribute('stroke-linejoin', 'round');
+        p.setAttribute('stroke-linecap', 'round');
+      } else {
+        p.removeAttribute('stroke');
+        p.removeAttribute('stroke-width');
+        p.removeAttribute('paint-order');
+        p.removeAttribute('stroke-linejoin');
+        p.removeAttribute('stroke-linecap');
+      }
+    });
+  }
+
+  function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+}
+
+// Events
+textInput.addEventListener('input', async () => {
+  const raw = textInput.value;
+  const t = safeText(raw);
+  if (raw !== t) textInput.value = t;
+  if (!wm) return mount();
+  if (isOverlayActive()) return mount(); // γ post-process or α overlay would be wiped by setText
+  try {
+    if (effectivePipeline() === 'outline-deform') await wm.setText(t);
+    else wm.setText(t);
+  } catch {
+    mount();
+  }
+});
+
+presetSelect.addEventListener('change', () => {
+  currentPreset = presetSelect.value;
+  mount();
+});
+
+colorInput.addEventListener('input', () => {
+  currentColor = colorInput.value;
+  if (!wm) return;
+  if (isOverlayActive()) return mount();
+  wm.color = currentColor;
+  wm._render && wm._render();
+});
+
+modeSeg.querySelectorAll('button').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    mode = btn.dataset.value;
+    modeSeg.querySelectorAll('button').forEach((b) => {
+      const on = b === btn;
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-pressed', String(on));
+    });
+    mount();
+  });
+});
+
+resetBtn.addEventListener('click', () => {
+  if (!wm) return;
+  if (isOverlayActive()) return mount(); // cheapest reset
+  if (effectivePipeline() === 'outline-deform' && wm.resetAxes) {
+    wm.resetAxes();
+    renderAxisRow();
+  } else if (wm.resetAll) {
+    wm.resetAll();
+  }
+});
+
+// Initial mount
+mount();
+</script>
+
+</body>
+</html>
