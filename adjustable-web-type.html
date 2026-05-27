@@ -85,7 +85,8 @@
     position: relative;
   }
   .mast .row-secondary .ctrl:first-child {
-    flex-shrink: 0;
+    flex: 0 1 auto;
+    min-width: 0;
   }
   .mast .row-secondary .ctrl[data-tip]::after {
     content: attr(data-tip);
@@ -133,6 +134,8 @@
   }
   .preset-picker {
     position: relative;
+    flex: 1 1 auto;
+    min-width: 0;
   }
   .preset-picker__native {
     position: absolute;
@@ -152,8 +155,11 @@
     align-items: center;
     gap: 6px;
     min-height: 22px;
-    min-width: 27ch; /* longest option: No preset (glyph defaults) */
-    width: auto;
+    /* 38ch is the longest option ("Parametric letters (no reference font)") —
+       we prefer that width on wide screens, but allow shrinking when the row is tight. */
+    flex-basis: 38ch;
+    width: 100%;
+    min-width: 0;
     max-width: none;
     background: transparent;
     border: none;
@@ -168,6 +174,8 @@
     flex: 1 1 auto;
     min-width: 0;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
     font-size: 15px;
     line-height: 1.2;
   }
@@ -191,7 +199,8 @@
     border: 1px solid var(--rule);
     border-radius: 2px;
     box-shadow: 0 4px 12px rgba(10, 10, 11, 0.08);
-    min-width: 100%;
+    min-width: max(100%, 38ch);
+    max-width: min(90vw, 480px);
     max-height: 280px;
     overflow-y: auto;
   }
@@ -274,11 +283,12 @@
     text-transform: uppercase;
     color: var(--ink);
   }
-  .mast .left .site-meta {
-    font-family: var(--mono);
+  .mast .left .site-tagline {
+    font-family: var(--sans);
     font-size: 11px;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
+    font-weight: 400;
+    letter-spacing: 0;
+    text-transform: none;
     color: var(--muted);
   }
   .mast .center {
@@ -322,7 +332,7 @@
     letter-spacing: 0.04em;
   }
 
-  button.btn {
+  .btn {
     font-family: var(--mono);
     font-size: 11px;
     letter-spacing: 0.06em;
@@ -333,13 +343,17 @@
     background: transparent;
     border-radius: 2px;
     cursor: pointer;
-    transition: background 100ms ease, color 100ms ease;
+    transition: background 100ms ease, color 100ms ease, border-color 100ms ease;
   }
-  button.btn:hover { background: var(--accent); color: var(--paper-2); }
-  button.btn.solid { background: var(--accent); color: var(--paper-2); }
-  button.btn.solid:hover { background: var(--ultramarine-dark); border-color: var(--ultramarine-dark); }
-  button.btn.ghost { border-color: var(--rule); color: var(--muted); }
-  button.btn.ghost:hover { background: var(--rule); color: var(--ink); }
+  a.btn {
+    display: inline-block;
+    text-decoration: none;
+  }
+  .btn:hover { background: var(--accent); color: var(--paper-2); }
+  .btn.solid { background: var(--accent); color: var(--paper-2); }
+  .btn.solid:hover { background: var(--ultramarine-dark); border-color: var(--ultramarine-dark); }
+  .btn.ghost { border-color: var(--rule); color: var(--muted); }
+  .btn.ghost:hover { background: var(--rule); color: var(--ink); }
   #export-code { transition: background 100ms ease, color 100ms ease, border-color 100ms ease; }
   #export-code:hover {
     background: var(--ultramarine-dark);
@@ -369,6 +383,24 @@
     max-width: 100%;
     height: auto;
   }
+  .outline-disclaimer {
+    width: 100%;
+    max-width: 720px;
+    margin: 0 auto 20px;
+    padding: 12px 14px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--muted);
+    background: var(--grey-100);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+  }
+  .outline-disclaimer[hidden] { display: none; }
+  .outline-disclaimer p { margin: 0 0 8px; }
+  .outline-disclaimer p:last-child { margin: 0; }
+  .outline-disclaimer strong { color: var(--ink); }
+  .outline-disclaimer .attribution { font-family: var(--mono); font-size: 11px; color: var(--grey-600); }
+  .ctrl.parametric-only[hidden] { display: none; }
 
   /* ─── Footer strip ────────────────────────────────────────────────── */
   .footer {
@@ -389,19 +421,6 @@
   }
   .footer-hints b { color: var(--ink); }
   .footer-hints span + span { margin-left: 14px; padding-left: 14px; border-left: 1px solid var(--rule); }
-  .footer-dev {
-    display: flex;
-    align-items: baseline;
-    gap: 8px;
-    padding-top: 16px;
-    border-top: 1px solid var(--rule);
-    font-size: 10px;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--grey-400);
-  }
-  .footer-dev a { color: var(--muted); text-decoration: none; }
-  .footer-dev a:hover { color: var(--accent); }
 
   /* ─── Patch notes ─────────────────────────────────────────────────── */
   .notes {
@@ -427,6 +446,9 @@
     color: var(--ink-soft);
     margin: 0 0 48px;
     max-width: 62ch;
+  }
+  #developer-docs .docs-source {
+    margin: 0 0 16px;
   }
   .sprint {
     margin: 0 0 48px;
@@ -517,6 +539,10 @@
   @media (max-width: 900px) {
     .mast .row-primary { grid-template-columns: 1fr; gap: 12px; padding: 12px 18px; }
     .mast .row-secondary { padding: 8px 14px; gap: 8px; }
+    .mast .row-secondary .ctrl { gap: 5px; }
+    .axis-controls { gap: 8px; }
+    .axis-controls input[type="range"] { width: 72px; }
+    .mast .row-secondary input.hex-input { width: 60px; }
     .mast .left, .stage-actions { justify-content: center; text-align: center; }
     .mast .center { align-items: center; }
     .center-row { justify-content: center; max-width: 100%; }
@@ -527,10 +553,12 @@
   }
   @media (max-width: 640px) {
     .mast .row-secondary {
-      flex-wrap: wrap;
-      row-gap: 10px;
-      padding: 10px 18px;
+      gap: 6px;
+      padding: 8px 12px;
     }
+    .mast .row-secondary .ctrl { gap: 4px; }
+    .axis-controls { gap: 6px; }
+    .axis-controls input[type="range"] { width: 60px; }
   }
 </style>
 </head>
@@ -541,7 +569,7 @@
   <div class="row-primary">
     <div class="left">
       <h1 class="site-title">Adjustable Web Type</h1>
-      <span class="site-meta">v0.2</span>
+      <span class="site-tagline">Play with letterforms</span>
     </div>
     <div class="center">
       <div class="center-row">
@@ -553,7 +581,7 @@
   </div>
   <div class="row-secondary">
     <div class="ctrl" data-tip="Starter font mood — tunes stroke weight, curvature, and glyph params inspired by open-source typefaces.">
-      <label id="preset-label" for="preset-trigger">Preset</label>
+      <label id="preset-label" for="preset-trigger">Reference face</label>
       <div class="preset-picker" id="preset-picker">
         <select id="preset" class="preset-picker__native" hidden tabindex="-1" aria-hidden="true">
           <option value="bubbly">Rubik Bubbles</option>
@@ -561,7 +589,7 @@
           <option value="sourceSans">Source Sans 3</option>
           <option value="bitter">Bitter</option>
           <option value="ibmPlexMono">IBM Plex Mono</option>
-          <option value="none">No preset (glyph defaults)</option>
+          <option value="none">Parametric letters (no reference font)</option>
         </select>
         <button type="button" id="preset-trigger" class="preset-picker__trigger" aria-haspopup="listbox" aria-expanded="false" aria-controls="preset-listbox" aria-labelledby="preset-label preset-trigger-label">
           <span id="preset-trigger-label" class="preset-picker__trigger-label">Rubik Bubbles</span>
@@ -573,7 +601,7 @@
           <li class="preset-picker__option" role="option" data-value="sourceSans" aria-selected="false" tabindex="-1">Source Sans 3</li>
           <li class="preset-picker__option" role="option" data-value="bitter" aria-selected="false" tabindex="-1">Bitter</li>
           <li class="preset-picker__option" role="option" data-value="ibmPlexMono" aria-selected="false" tabindex="-1">IBM Plex Mono</li>
-          <li class="preset-picker__option" role="option" data-value="none" aria-selected="false" tabindex="-1">No preset (glyph defaults)</li>
+          <li class="preset-picker__option" role="option" data-value="none" aria-selected="false" tabindex="-1">Parametric letters (no reference font)</li>
         </ul>
       </div>
     </div>
@@ -584,12 +612,19 @@
       <input id="hex-color" class="hex-input" type="text" value="#2a2ae5" spellcheck="false" autocomplete="off" maxlength="7" placeholder="#000000">
     </div>
     <span class="divider"></span>
-    <div class="ctrl" data-tip="Curve the auto-generated letters (A–Z and the expanded lowercase set). Off restores straight polylines.">
+    <div id="axis-controls" class="axis-controls outline-deform-only" hidden></div>
+    <span class="divider outline-deform-only" hidden></span>
+    <div class="ctrl" id="ctrl-outline" data-tip="Static filled paths from the font file — no deformation handles (comparison only).">
+      <label id="t-outline-label" for="t-outline">Static compare</label>
+      <button id="t-outline" class="toggle" type="button" aria-pressed="false" aria-labelledby="t-outline-label">off</button>
+    </div>
+    <span class="divider parametric-only" hidden></span>
+    <div class="ctrl parametric-only" data-tip="Curve the auto-generated letters (A–Z and the expanded lowercase set). Off restores straight polylines.">
       <label id="t-curv-label" for="t-curv">Monoline curvature</label>
       <button id="t-curv" class="toggle on" type="button" aria-pressed="true" aria-labelledby="t-curv-label">on</button>
     </div>
-    <span class="divider"></span>
-    <div class="ctrl" data-tip="Map cursor position into handle drag deltas so the whole wordmark morphs as you move the mouse.">
+    <span class="divider not-static-outline"></span>
+    <div class="ctrl not-static-outline" data-tip="Map cursor position to deformation (outline axes) or tangent handles (parametric mode).">
       <label id="t-mouse-label" for="t-mouse">Mouse follow</label>
       <button id="t-mouse" class="toggle" type="button" aria-pressed="false" aria-labelledby="t-mouse-label">off</button>
     </div>
@@ -598,6 +633,7 @@
 
 <!-- ─── Hero render ─────────────────────────────────────────────────── -->
 <main class="stage-wrap" aria-label="Interactive wordmark editor">
+  <div id="outline-disclaimer" class="outline-disclaimer" role="note" hidden></div>
   <div id="stage" class="stage"></div>
   <div class="stage-actions">
     <button id="export-code" class="btn ghost" type="button">Export code</button>
@@ -606,15 +642,12 @@
 
 <!-- ─── Footer strip ────────────────────────────────────────────────── -->
 <div class="footer">
-  <div class="footer-hints">
-    <span><b>Drag any handle</b> to sculpt that letter.</span>
-    <span>Circles with arms = curve controls</span>
-    <span>Filled circles = positional anchors</span>
-  </div>
-  <div class="footer-dev">
-    <a href="CHANGES.md">CHANGES.md</a>
-    <span>·</span>
-    <a href="lib/sculpt.js">lib/sculpt.js</a>
+  <div class="footer-hints" id="footer-hints">
+    <span id="footer-hint-outline" hidden><b>Static compare</b> — filled paths from the open-source font, no handles.</span>
+    <span id="footer-hint-outline-deform" hidden><b>Drag axis handles</b> on the right to deform the reference font outline.</span>
+    <span id="footer-hint-parametric" hidden><b>Drag any handle</b> to sculpt that letter (parametric mode).</span>
+    <span id="footer-hint-parametric-2">Circles with arms = curve controls</span>
+    <span id="footer-hint-parametric-3">Filled circles = positional anchors</span>
   </div>
 </div>
 
@@ -622,10 +655,13 @@
 <section id="developer-docs" class="notes" aria-labelledby="developer-docs-heading">
   <h2 id="developer-docs-heading">Developer <em>documentation</em>.</h2>
   <p class="deck">
-    A drop-in script that draws an alphabet of parametric letterforms with draggable Bezier handles. One global, two classes, five font-mood presets. Everything you need to embed it is on this page.
+    A playful drop-in script for exploring letterforms — deform real reference font outlines by default, with preset axes (bubbliness, serif length, width). Parametric anatomy handles and static compare modes are optional. See <a href="docs/THIRD_PARTY_FONTS.md">third-party font licenses</a>.
   </p>
 
   <div class="sprint">
+    <p class="docs-source">
+      <a class="btn solid" href="https://github.com/lizkhoo/adjustable-web-type/blob/main/lib/sculpt.js" target="_blank" rel="noopener noreferrer">lib/sculpt.js</a>
+    </p>
     <h3>Install &amp; mount</h3>
     <div class="patches">
       <div class="patch">
@@ -720,18 +756,38 @@ wm.makeInteractive();                         // draggable handles + tooltip</co
   </div>
 
   <div class="sprint">
-    <h3>Presets &amp; extending</h3>
+    <h3>Reference face &amp; render modes</h3>
     <div class="patches no-num">
       <div class="patch">
         <div>
-          <h4>Preset shape</h4>
+          <h4>Deformable outline (default)</h4>
+          <p>Default for font presets — loads the OFL reference face and deforms paths with preset axes. Requires <code>SculptLettering.setOpentypeParser(opentype)</code>.</p>
+<pre class="code"><code>SculptLettering.setOpentypeParser(opentype);
+const wm = await SculptLettering.createWordmark('Hello', {
+  presetKey: 'bubbly',
+  renderMode: 'outline',
+});
+wm.mount('#stage');
+wm.makeInteractive();
+wm.setAxis('bubbliness', 0.6);</code></pre>
+        </div>
+      </div>
+      <div class="patch">
+        <div>
+          <h4>Static compare</h4>
+          <p>Toggle <strong>Static compare</strong> in the demo, or <code>renderMode: 'outline-static'</code> with <code>OutlineWordmark</code>. Filled paths only — no handles.</p>
+        </div>
+      </div>
+      <div class="patch">
+        <div>
+          <h4>Parametric letters (fallback / pedagogy)</h4>
+          <p>Choose <strong>Parametric letters (no reference font)</strong> or <code>renderMode: 'parametric'</code>. Hand-authored anatomy handles; presets seed <code>defaults</code> and <code>glyphParams</code> only.</p>
 <pre class="code"><code>{
   name: 'bubbly',
-  fontRef: 'Rubik Bubbles',  // display label only — presets tune sculpt params, not web fonts
-  defaults:    { strokeWeight: 28, curvature: 0.7, xHeight: 140, /* … */ },
-  glyphParams: { a: { bowlWidth: 60, strokeWeight: 28, /* … */ }, /* curated set */ },
+  fontRef: 'Rubik Bubbles',
+  defaults:    { strokeWeight: 28, curvature: 0.7, /* … */ },
+  glyphParams: { a: { bowlWidth: 60, /* … */ } },
 }</code></pre>
-          <p>Presets are mood tunings, not loaded typefaces. <code>defaults</code> apply to every glyph (filtered to each glyph's param keys). <code>glyphParams[ch]</code> overrides specific keys for that character — other keys still inherit from <code>defaults</code>. Use mixed text (e.g. <code>Hello jazz</code>) to see monoline traits like curvature and slant alongside curated letters.</p>
         </div>
       </div>
       <div class="patch">
@@ -758,17 +814,27 @@ wm.makeInteractive();                         // draggable handles + tooltip</co
     color: var(--ink);
   }
   .notes pre.code code { background: transparent; border: 0; padding: 0; font-size: inherit; }
+  .axis-controls { display: flex; flex-wrap: nowrap; align-items: center; gap: 12px; }
+  .axis-controls .axis-ctrl { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+  .axis-controls .axis-ctrl label { font-family: var(--mono); font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+  .axis-controls input[type="range"] { width: 88px; accent-color: var(--accent); }
 </style>
 
 <div id="flash" class="flash">Saved</div>
 
 <!-- ─── Library + bootstrap ─────────────────────────────────────────── -->
 <script src="lib/sculpt.js"></script>
-<script>
+<script type="module">
+import * as opentype from 'opentype.js';
+
+const SL = window.SculptLettering;
+SL.setOpentypeParser(opentype);
+
 (function () {
   'use strict';
 
   const stage   = document.getElementById('stage');
+  const outlineDisclaimer = document.getElementById('outline-disclaimer');
   const input   = document.getElementById('text-input');
   const reset   = document.getElementById('reset');
   const exportBtn = document.getElementById('export-code');
@@ -779,17 +845,30 @@ wm.makeInteractive();                         // draggable handles + tooltip</co
   const presetOptions = Array.from(presetListbox.querySelectorAll('[role="option"]'));
   const hexColor = document.getElementById('hex-color');
   const hexSwatch = document.getElementById('hex-swatch');
+  const tOutline = document.getElementById('t-outline');
+  const ctrlOutline = document.getElementById('ctrl-outline');
   const tCurv   = document.getElementById('t-curv');
   const tMouse  = document.getElementById('t-mouse');
   const flashEl = document.getElementById('flash');
+  const parametricCtrls = document.querySelectorAll('.parametric-only');
+  const notStaticOutlineCtrls = document.querySelectorAll('.not-static-outline');
+  const outlineDeformCtrls = document.querySelectorAll('.outline-deform-only');
+  const axisControlsHost = document.getElementById('axis-controls');
+  const footerHintOutline = document.getElementById('footer-hint-outline');
+  const footerHintOutlineDeform = document.getElementById('footer-hint-outline-deform');
+  const footerHintParametric = document.getElementById('footer-hint-parametric');
+  const footerHintParametric2 = document.getElementById('footer-hint-parametric-2');
+  const footerHintParametric3 = document.getElementById('footer-hint-parametric-3');
 
   let curvatureOn = true;
   let mouseFollowOn = false;
+  let referenceOutlinesOn = false;
   let currentPreset = 'bubbly';
   let currentColor = '#2a2ae5';
   let wm = null;
   let presetPickerOpen = false;
   let presetActiveIndex = 0;
+  let mountToken = 0;
 
   const PRESET_LABELS = {
     bubbly: 'Rubik Bubbles',
@@ -797,7 +876,7 @@ wm.makeInteractive();                         // draggable handles + tooltip</co
     sourceSans: 'Source Sans 3',
     bitter: 'Bitter',
     ibmPlexMono: 'IBM Plex Mono',
-    none: 'No preset (glyph defaults)',
+    none: 'Parametric letters (no reference font)',
   };
 
   const PRESET_FONTS = {
@@ -837,13 +916,8 @@ wm.makeInteractive();                         // draggable handles + tooltip</co
   }
 
   function choosePreset(value) {
-    if (value === currentPreset) {
-      closePresetPicker();
-      return;
-    }
-    syncPresetPicker(value);
-    preset.dispatchEvent(new Event('change', { bubbles: true }));
     closePresetPicker();
+    applyPreset(value);
   }
 
   function initPresetPicker() {
@@ -956,15 +1030,117 @@ wm.makeInteractive();                         // draggable handles + tooltip</co
     wm._render();
   }
 
+  function isStaticOutlineMode() {
+    return referenceOutlinesOn && currentPreset !== 'none';
+  }
+
+  function isDeformableOutlineMode() {
+    return currentPreset !== 'none' && !referenceOutlinesOn;
+  }
+
+  function isParametricMode() {
+    return currentPreset === 'none';
+  }
+
+  function syncAxisControls() {
+    if (!axisControlsHost) return;
+    axisControlsHost.innerHTML = '';
+    if (!isDeformableOutlineMode()) {
+      axisControlsHost.hidden = true;
+      return;
+    }
+    const preset = SL.presets[currentPreset];
+    if (!preset || !preset.axes || !preset.axes.length) {
+      axisControlsHost.hidden = true;
+      return;
+    }
+    axisControlsHost.hidden = false;
+    preset.axes.forEach((ax) => {
+      const wrap = document.createElement('div');
+      wrap.className = 'ctrl axis-ctrl';
+      const label = document.createElement('label');
+      label.setAttribute('for', 'axis-' + ax.id);
+      label.textContent = ax.label;
+      const range = document.createElement('input');
+      range.type = 'range';
+      range.id = 'axis-' + ax.id;
+      range.min = String(ax.min);
+      range.max = String(ax.max);
+      range.step = '0.01';
+      const val = wm && wm.axisValues && wm.axisValues[ax.id] != null
+        ? wm.axisValues[ax.id]
+        : ax.default;
+      range.value = String(val);
+      range.addEventListener('input', () => {
+        if (wm && wm.setAxis) wm.setAxis(ax.id, parseFloat(range.value));
+      });
+      wrap.appendChild(label);
+      wrap.appendChild(range);
+      axisControlsHost.appendChild(wrap);
+    });
+  }
+
+  function updateModeUI() {
+    const staticOutline = isStaticOutlineMode();
+    const deformable = isDeformableOutlineMode();
+    const parametric = isParametricMode();
+    if (ctrlOutline) ctrlOutline.hidden = currentPreset === 'none';
+    parametricCtrls.forEach((el) => { el.hidden = !parametric; });
+    notStaticOutlineCtrls.forEach((el) => { el.hidden = staticOutline; });
+    outlineDeformCtrls.forEach((el) => { el.hidden = !deformable; });
+    if (staticOutline) {
+      outlineDisclaimer.innerHTML = SL.outlineAttributionHtml(currentPreset)
+        .replace(/^<aside[^>]*>/, '')
+        .replace(/<\/aside>$/, '');
+      outlineDisclaimer.hidden = false;
+      footerHintOutline.hidden = false;
+      footerHintOutlineDeform.hidden = true;
+      footerHintParametric.hidden = true;
+      footerHintParametric2.hidden = true;
+      footerHintParametric3.hidden = true;
+      reset.title = 'Reload static reference outlines';
+    } else if (deformable) {
+      outlineDisclaimer.innerHTML = SL.outlineAttributionHtml(currentPreset)
+        .replace(/^<aside[^>]*>/, '')
+        .replace(/<\/aside>$/, '');
+      outlineDisclaimer.hidden = false;
+      footerHintOutline.hidden = true;
+      footerHintOutlineDeform.hidden = false;
+      footerHintParametric.hidden = true;
+      footerHintParametric2.hidden = true;
+      footerHintParametric3.hidden = true;
+      reset.title = 'Reset deformation axes to preset defaults';
+    } else {
+      outlineDisclaimer.hidden = true;
+      outlineDisclaimer.innerHTML = '';
+      footerHintOutline.hidden = true;
+      footerHintOutlineDeform.hidden = true;
+      footerHintParametric.hidden = false;
+      footerHintParametric2.hidden = false;
+      footerHintParametric3.hidden = false;
+      reset.title = 'Restore each letter to parametric defaults';
+    }
+    syncAxisControls();
+  }
+
+  function cloneGlyphParams(glyphParams) {
+    const out = {};
+    if (!glyphParams) return out;
+    for (const ch of Object.keys(glyphParams)) {
+      out[ch] = Object.assign({}, glyphParams[ch]);
+    }
+    return out;
+  }
+
   function buildPreset() {
     if (currentPreset === 'none') return undefined;
-    const p = SculptLettering.presets[currentPreset];
+    const p = SL.presets[currentPreset];
     if (!p) return undefined;
     const base = {
       name: p.name,
       fontRef: p.fontRef,
       defaults: Object.assign({}, p.defaults),
-      glyphParams: Object.assign({}, p.glyphParams),
+      glyphParams: cloneGlyphParams(p.glyphParams),
     };
     if (p.monoCell) base.monoCell = p.monoCell;
     if (p.strokeJoin) base.strokeJoin = p.strokeJoin;
@@ -974,18 +1150,75 @@ wm.makeInteractive();                         // draggable handles + tooltip</co
     return base;
   }
 
-  function mount(text) {
+  async function applyPreset(value) {
+    if (value === currentPreset && wm) return;
+    currentPreset = value;
+    if (value === 'none') referenceOutlinesOn = false;
+    syncPresetPicker(value);
+    syncOutlineToggle();
+    await mount(safeText(input.value));
+    flash('Reference face: ' + (PRESET_LABELS[value] || value));
+  }
+
+  function syncOutlineToggle() {
+    if (!tOutline) return;
+    tOutline.textContent = referenceOutlinesOn ? 'on' : 'off';
+    tOutline.classList.toggle('on', referenceOutlinesOn);
+    tOutline.setAttribute('aria-pressed', String(referenceOutlinesOn));
+  }
+
+  async function mount(text) {
+    const token = ++mountToken;
+    if (wm && mouseFollowOn && wm.disableMouseFollow) wm.disableMouseFollow();
+    stage.innerHTML = '<p class="stage-loading" style="font-family:var(--mono);font-size:12px;color:var(--muted)">Loading letterforms…</p>';
+    updateModeUI();
+
+    try {
+      if (isStaticOutlineMode()) {
+        wm = await SL.OutlineWordmark.create(text || ' ', {
+          presetKey: currentPreset,
+          color: currentColor,
+          tracking: 12,
+          padding: 64,
+        });
+      } else if (isDeformableOutlineMode()) {
+        wm = await SL.DeformableOutlineWordmark.create(text || ' ', {
+          presetKey: currentPreset,
+          color: currentColor,
+          tracking: 12,
+          padding: 64,
+        });
+      } else {
+        wm = new SL.Wordmark(text || ' ', {
+          preset: buildPreset(),
+          color: currentColor,
+          tracking: 12,
+          padding: 64,
+        });
+      }
+    } catch (err) {
+      if (token !== mountToken) return;
+      stage.innerHTML = '';
+      console.error(err);
+      flash('Could not load font outlines — see console');
+      return;
+    }
+    if (token !== mountToken) return;
+
     stage.innerHTML = '';
-    wm = new SculptLettering.Wordmark(text || ' ', {
-      preset: buildPreset(),
-      color: currentColor,
-      tracking: 12,
-      padding: 64,
-    });
     wm.mount(stage);
-    wm.makeInteractive();
-    if (mouseFollowOn) wm.enableMouseFollow({ tangentOnly: true });
-    // Cap height so the wordmark always fits the viewport comfortably.
+    if (!isStaticOutlineMode()) {
+      wm.makeInteractive();
+      if (mouseFollowOn && wm.enableMouseFollow) {
+        if (isParametricMode()) {
+          wm.enableMouseFollow({ tangentOnly: true });
+        } else {
+          const axes = SL.presets[currentPreset] && SL.presets[currentPreset].axes;
+          wm.enableMouseFollow({ mapAxis: axes && axes[0] ? axes[0].id : null, clamp: 220, strength: 0.4 });
+        }
+      }
+    }
+    syncAxisControls();
     const svg = stage.querySelector('svg');
     if (svg) {
       svg.style.maxHeight = 'min(60vh, 520px)';
@@ -1016,7 +1249,7 @@ wm.makeInteractive();                         // draggable handles + tooltip</co
     applyColor(hexSwatch.value.toLowerCase(), 'swatch');
   });
 
-  input.addEventListener('input', () => {
+  input.addEventListener('input', async () => {
     const raw = input.value;
     const t = safeText(raw);
     if (raw !== t) {
@@ -1024,19 +1257,31 @@ wm.makeInteractive();                         // draggable handles + tooltip</co
       flash('Unsupported characters removed');
     }
     if (wm && wm.text === t) return;
-    // Use the incremental setText (Sprint 2 fix #4) — preserves tuned glyphs.
     if (wm) {
-      try { wm.setText(t); }
-      catch { mount(t); }
+      try {
+        if (isStaticOutlineMode() || isDeformableOutlineMode()) await wm.setText(t);
+        else wm.setText(t);
+      } catch {
+        await mount(t);
+      }
     } else {
-      mount(t);
+      await mount(t);
     }
   });
 
-  reset.addEventListener('click', () => {
+  reset.addEventListener('click', async () => {
     if (!wm) return;
-    wm.resetAll();
-    flash('Letters reset to preset defaults');
+    if (isStaticOutlineMode()) {
+      await wm.setPresetKey(currentPreset);
+      flash('Static reference outlines reloaded');
+    } else if (isDeformableOutlineMode() && wm.resetAxes) {
+      wm.resetAxes();
+      syncAxisControls();
+      flash('Deformation axes reset');
+    } else if (wm.resetAll) {
+      wm.resetAll();
+      flash('Letters reset to defaults');
+    }
   });
 
   exportBtn.addEventListener('click', async () => {
@@ -1053,29 +1298,34 @@ wm.makeInteractive();                         // draggable handles + tooltip</co
   });
 
   preset.addEventListener('change', () => {
-    currentPreset = preset.value;
-    syncPresetPicker(currentPreset);
-    mount(safeText(input.value));
+    applyPreset(preset.value);
   });
 
   initPresetPicker();
 
-  tCurv.addEventListener('click', () => {
+  tCurv.addEventListener('click', async () => {
+    if (!isParametricMode()) return;
     curvatureOn = !curvatureOn;
     tCurv.textContent = curvatureOn ? 'on' : 'off';
     tCurv.classList.toggle('on', curvatureOn);
     tCurv.setAttribute('aria-pressed', String(curvatureOn));
-    mount(safeText(input.value));
+    await mount(safeText(input.value));
   });
 
   tMouse.addEventListener('click', () => {
+    if (isStaticOutlineMode()) return;
     mouseFollowOn = !mouseFollowOn;
     tMouse.textContent = mouseFollowOn ? 'on' : 'off';
     tMouse.classList.toggle('on', mouseFollowOn);
     tMouse.setAttribute('aria-pressed', String(mouseFollowOn));
-    if (!wm) return;
+    if (!wm || !wm.enableMouseFollow) return;
     if (mouseFollowOn) {
-      wm.enableMouseFollow({ tangentOnly: true });
+      if (isParametricMode()) {
+        wm.enableMouseFollow({ tangentOnly: true });
+      } else {
+        const axes = SL.presets[currentPreset] && SL.presets[currentPreset].axes;
+        wm.enableMouseFollow({ mapAxis: axes && axes[0] ? axes[0].id : null, clamp: 220, strength: 0.4 });
+      }
       flash('Mouse follow on — wave your cursor around');
     } else {
       wm.disableMouseFollow();
@@ -1083,7 +1333,24 @@ wm.makeInteractive();                         // draggable handles + tooltip</co
     }
   });
 
-  // Initial render
+  tOutline.addEventListener('click', async () => {
+    if (currentPreset === 'none') return;
+    referenceOutlinesOn = !referenceOutlinesOn;
+    syncOutlineToggle();
+    if (referenceOutlinesOn && mouseFollowOn && wm && wm.disableMouseFollow) {
+      wm.disableMouseFollow();
+      mouseFollowOn = false;
+      tMouse.textContent = 'off';
+      tMouse.classList.remove('on');
+      tMouse.setAttribute('aria-pressed', 'false');
+    }
+    await mount(safeText(input.value));
+    flash(referenceOutlinesOn ? 'Static compare — no handles' : 'Interactive outline — drag axis handles');
+  });
+
+  syncOutlineToggle();
+
+  // Initial render (deformable outline for default reference face)
   mount(safeText(input.value));
 })();
 </script>

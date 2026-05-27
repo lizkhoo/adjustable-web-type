@@ -1,6 +1,61 @@
 # Agent learnings
 
-## Preset picker labels — font names only (2026-05-26)
+## Outline-first dual-pipeline resolution (2026-05-26)
+
+**Problem:** Font presets conflated static `OutlineWordmark` (real woff paths, no handles) with parametric `Wordmark` (handles on internal glyphs). Users expected handles to edit Rubik Bubbles / Bitter outlines.
+
+**Resolution:**
+- **`DeformableOutlineWordmark`** — primary path for `createWordmark()` + demo when a reference face is selected. Stores opentype `baseCommands`, rebuilds `pathData` via preset **axes** (`bubbliness`, `serifLength`, `width`).
+- **`OutlineWordmark`** — `renderMode: 'outline-static'` / demo **Static compare** toggle only.
+- **`Wordmark`** — `renderMode: 'parametric'` / preset `none` (pedagogy + fallback if outline load fails per glyph).
+- Demo label **Reference face**; axis range sliders + right-side axis drag handles; mouse-follow maps to primary axis in outline mode.
+
+**Operators (spike):** `bubbliness` = centroid puff scale; `serifLength` = baseline stub segments; `width` = horizontal scale from glyph left.
+
+**Verify:** `npm run dev` → Rubik Bubbles → drag **Bubbliness** slider/handle → outline puffs; **Static compare** on → no handles; **Parametric letters** → anatomy handles return.
+
+## Product intent — letterform toy, not type-design tool (2026-05-26)
+
+**Authoritative framing (user):** This is not intended to be a tool for serious type design. It is a toy for playing with letterforms and introducing non–type-designers to parts of letter anatomy through interaction.
+
+**Encoded in:** `docs/PRODUCT_INTENT.md`; `.cursor/skills/type-design-expert/SKILL.md` (library-specific notes).
+
+**Agent behavior:**
+
+- Target audience: curious learners, not professional type designers.
+- Success = tactile discovery, vocabulary via handles/tooltips, delight at extremes.
+- Not success = shipping text fonts, full axis systems, professional workflow parity.
+- Critiques must separate “missing for a font” from “missing for this toy.” Contrast, kerning, OTF export, etc. are optional polish — not gaps that block the toy’s purpose.
+- Type-design expert skill remains useful for anatomy naming and param mapping; recommendations should be framed pedagogically unless the user asks for production work.
+
+## Outline mode default + licensing (2026-05-26)
+
+**User request:** Default to real reference font outlines; disclaimers in docs, library, and exports; UI label "Preset" → "Start with".
+
+**Implemented:** `OutlineWordmark` + opentype.js font loading; preset `fontUrl`/license fields; demo outline default; `docs/THIRD_PARTY_FONTS.md`; export attribution banners.
+
+**Verify:** `npm run dev` → Rubik Bubbles outlines on load → switch fonts → parametric mode via "Parametric letters (no reference font)".
+
+## Outline mode inverted letters (2026-05-26)
+
+**Issue:** Reference font outlines mapped into the preview SVG appeared upside-down (position/layout correct, glyphs mirrored on baseline).
+
+**Root cause:** `opentype.js` `glyph.getPath()` already negates font Y (typographic Y-up → SVG Y-down). `OutlineWordmark._render()` / `toSVG()` also applied `scale(1,-1)`, double-flipping paths. Bounds in `extractOutlineGlyph()` were negated to match that extra flip.
+
+**Fix:** Drop `scale(1,-1)` from outline glyph `<g transform>`; use raw `getBoundingBox()` for `bounds` (`minY: bb.y1`, `maxY: bb.y2`). Keep `toPathData(3)` with default `flipY: false` when passing an integer.
+
+**Verify:** `npm run dev` → default `Hello jazz` → ascenders above baseline, `j` descender below; switch presets (Source Sans 3, Bitter) — letters upright; toggle **Reference outlines** for filled paths (no handles).
+
+## Demo lost handles after outline default (2026-05-26)
+
+**Issue:** After outline mode became the default for font presets, the demo mounted `OutlineWordmark` whenever a starter font was selected. That class has no `makeInteractive()` / `enableMouseFollow()` — handles and mouse-follow were skipped, and parametric toolbar controls were hidden.
+
+**Root cause:** Mode conflation, not a coordinate bug from the Y-flip fix. `isOutlineMode()` returned `currentPreset !== 'none'`, so Rubik Bubbles (etc.) always rendered reference paths instead of parametric `Wordmark`.
+
+**Fix:** Decouple modes in `adjustable-web-type.html`. `referenceOutlinesOn` defaults `false`; font presets drive parametric `Wordmark` + `buildPreset()`. New **Reference outlines** toggle (off by default) opts into `OutlineWordmark` for comparison. `makeInteractive()` and mouse follow run on every parametric mount. Y-flip fix in `lib/sculpt.js` unchanged.
+
+**Verify:** `npm run dev` → load page → 50+ handle circles on `Hello jazz` → drag a handle → toggle **Mouse follow** → letters morph with cursor → toggle **Reference outlines** on → filled font paths, upright, no handles → toggle off → handles return.
+
 
 Demo `#preset` custom combobox showed `bubbly · Rubik Bubbles`-style labels (preset key + `fontRef`). User-facing labels use `fontRef` only (`Rubik Bubbles`, `Instrument Serif`, …); internal `value` / `data-value` keys unchanged (`bubbly`, `instrumentSerif`, …). `lib/sculpt.js` `fontRef` was already correct.
 
@@ -21,6 +76,18 @@ Demo `#preset` custom combobox showed `bubbly · Rubik Bubbles`-style labels (pr
 ## Developer docs typography (2026-05-26)
 
 `#developer-docs` heading used `<em>documentation.</em>` with `.notes h2 em { font-style: italic }` for accent color only; deck paragraph had `font-style: italic` via `.notes .deck`. Both set to `font-style: normal`; accent color on the `<em>` kept. Scoped selectors to `#developer-docs` so future `.notes` reuse won't inherit italic defaults. Deck paragraph font switched from `var(--serif)` (Instrument Serif) to `var(--sans)` (Instrument Sans) — matches body/UI sans stack.
+
+## Preset selection not updating wordmark (2026-05-26)
+
+**Issue:** Choosing a preset updated the combobox label (reference web font in the trigger) but the sculpted SVG in `#stage` stayed on the initial mood — most visibly on `main`, where `buildPreset()` always returned `SculptLettering.presets.bubbly` regardless of `currentPreset`.
+
+**Fix:**
+- `buildPreset()` reads `SculptLettering.presets[currentPreset]` and deep-clones `glyphParams` per character.
+- Added `Wordmark.setPreset(preset)` — re-applies `resolvePresetParams` to every glyph and re-renders (refreshes mouse-follow rest snapshot when active).
+- Demo uses `applyPreset(value)` from the custom combobox and hidden `<select>` change handler; updates the live wordmark via `wm.setPreset()` instead of relying on a synthetic `change` event alone.
+- `mount()` disables mouse-follow on the old wordmark before replacing DOM (avoids orphaned `window` listeners).
+
+**Verify:** Default `Hello jazz` → pick IBM Plex Mono → monoline letters (`H`, `j`, `z`) get narrower cell width and zero curvature; pick Bitter → heavier stroke + miter joins on sans presets; flash shows preset name.
 
 ## Preset font shapes in demo (2026-05-26)
 
@@ -44,6 +111,51 @@ Demo `#preset` custom combobox showed `bubbly · Rubik Bubbles`-style labels (pr
 
 **Fix:** Default `flex-wrap: nowrap`; tighter gaps/padding/font sizes; preset `select` `max-width: 9.5rem`; label `white-space: nowrap`; shortened toggle label to “Mouse follow”. Wrap only at `max-width: 640px`. Verified: row height ~38px at 853px width, all four groups on one line.
 
+## Bubbliness operator — bump count along outline (2026-05-26)
+
+**Authoritative reframing (user):** Bubbliness should be the **number of bumps** on each letter. Higher value = more bumps. Lower value = fewer bumps. Not an inflate/deflate scale.
+
+**Final implementation in `lib/sculpt.js`:**
+
+- Axis: `{ id: 'bubbliness', label: 'Bubbliness', min: 0, max: 1, default: 0 }` (unipolar). At `0` the Rubik Bubbles outline renders as-is; at `1` it has the max bump count rippling along each contour.
+- `applyBubbliness(commands, t)` now does normal-displaced sine-wave deformation per subpath:
+  1. `splitSubpaths(commands)` splits at every `M`.
+  2. `sampleSubpathDense(commands, 16)` evaluates each `Q`/`C` at 16 samples and `L` at ~4, returns `{ points, cumDist, totalLen }` where `totalLen` includes the closing edge so `cum / totalLen` is a clean `[0, 1)` arc-length parameter.
+  3. For each sample point `p`, tangent = central difference of neighbours; normal = rotate-CCW; flip the normal if `(p - subpathCentroid) · normal < 0` so it points outward. (Robust across winding order and Y-up vs Y-down conventions — TrueType + opentype.js Y-flip combos break shoelace-based outerSign detection.)
+  4. Displacement `amplitude * sin(phase)` where `phase = (cum / totalLen) * bumpCount * 2π`. `bumpCount = round(t * 20)` (1–20 integer bumps), `amplitude = 0.06 * glyphSize * sqrt(t)` (square-root ramp so the very first bump is already visible at `t ≈ 0.05`).
+  5. Re-emit as `M / L… / Z` polyline. Beziers are lost (operator is destructive) but at typical render sizes the dense polyline reads as a smooth bumpy outline.
+- For inner counters: same outward-from-subpath-centroid orientation pushes bumps INTO the counter, so the stroke ripples on both inner and outer edges — bubbly fonts read as "bumpy on both sides of the stroke."
+- Axis call site: `applyPresetAxesToCommands` passes `norm` (== `v` for unipolar `[0,1]`).
+
+**Why prior versions failed:**
+
+- v1 (uniform glyph-centroid scale, `sx = 1 + t*0.12`): scaled outer + inner counters identically, so strokes never thickened; total expansion 12–16% was invisible on already-puffy Rubik Bubbles.
+- v2 (per-subpath bipolar inflate/deflate with shoelace-based outerSign): user clarified the metaphor is *bump count*, not *volume*. Replaced.
+
+**Limits:**
+
+- Operator is destructive (Bezier → polyline). Acceptable for this toy; if smooth Beziers are ever required at very small sizes, re-fit the polyline with a Catmull-Rom or de Casteljau least-squares step.
+- Layout uses `extractOutlineGlyph().advance` and original bounds, NOT deformed bounds, so high-amplitude bumps near sidebearings can overlap adjacent glyphs. Mitigated by capping amplitude at 6% of glyph size.
+
+**Verify:** Rubik Bubbles preset → **Bubbliness** at `0` → outline matches the unmodified font; drag to `0.5` → ~10 evenly-spaced bumps around each contour; drag to `1` → ~20 bumps, ~6%-of-glyph amplitude, both outer and inner edges ripple. Mouse follow mapped to `bubbliness` sweeps the count smoothly with cursor X.
+
+## Mast `row-secondary` — responsive shrink in one row (2026-05-26)
+
+**Issue:** At ~853px viewport, `row-secondary` overflowed because `.preset-picker__trigger` had a hard `min-width: 38ch` (~295px) and the wrapping `.ctrl:first-child` used `flex-shrink: 0`. With outline-deform mode adding a `BUBBLINESS` slider, total content > container, so the row clipped horizontally instead of fitting on one line.
+
+**Fix in `adjustable-web-type.html`:**
+- Preset picker is the only flex item allowed to shrink:
+  - `.row-secondary .ctrl:first-child` → `flex: 0 1 auto; min-width: 0`.
+  - `.preset-picker` → `flex: 1 1 auto; min-width: 0`.
+  - `.preset-picker__trigger` → `flex-basis: 38ch; width: 100%; min-width: 0` (prefers 38ch on wide screens, shrinks on narrow).
+  - `.preset-picker__trigger-label` → `overflow: hidden; text-overflow: ellipsis`.
+- Dropdown stays readable when trigger shrinks: `.preset-picker__list` → `min-width: max(100%, 38ch); max-width: min(90vw, 480px)`.
+- 900px breakpoint adds: `.row-secondary .ctrl { gap: 5px }`, `.axis-controls { gap: 8px }`, `axis-controls input[type=range] { width: 72px }`, `input.hex-input { width: 60px }`.
+- 640px breakpoint **no longer wraps** — keeps `nowrap`, just tightens further: `gap: 6px; padding: 8px 12px`; slider `width: 60px`.
+- Phantom-divider fix: tagged previously-untagged dividers around `Monoline curvature` (`parametric-only`) and before `Mouse follow` (`not-static-outline`) so they hide in sync with their adjacent ctrls. JS uses `el.hidden = …` so spans work via UA `[hidden]` rule with no script change.
+
+**Verify:** `npm run dev` → 853px viewport in outline-deform mode (Rubik Bubbles default) → REFERENCE FACE / Rubik Bubbles ▾ / HEX / BUBBLINESS / STATIC COMPARE / MOUSE FOLLOW all on one row, no clipping; resize narrower → preset label truncates with ellipsis before any other ctrl shrinks; switch to Parametric letters preset → Monoline curvature ctrl + its divider both reappear; toggle Static compare → Mouse follow ctrl + its divider both hide cleanly (no orphan dividers).
+
 ## Preset select clipped in mast (2026-05-26)
 
 **Issue:** `#preset` in `.row-secondary` truncated selected text (e.g. `bubbly · Rubik Bubbles`) — container ~143px. Causes: `select { max-width: 9.5rem }` (added to keep one row at ~850px) plus `.ctrl:first-child { flex-shrink: 1; min-width: 0 }`.
@@ -58,7 +170,7 @@ Native `<select>` / `<option>` cannot reliably render each option in its referen
 
 Main view reviewed at `http://127.0.0.1:5173/adjustable-web-type.html`. Key issues: no `<h1>` (brand is plain text in masthead); demo + dev docs share one scroll with weak section boundary; footer handle legend is inaccurate — positional anchors render as **filled circles**, not squares (squares only appear at tangent anchor points); toggle buttons expose only "on"/"off" to assistive tech; input silently strips non `[A-Za-z ]` chars; Reset reverts to glyph defaults not preset (undocumented in UI). Footer mixes user onboarding copy with dev file links at equal weight.
 
-**Implemented (same session):** All critique items applied in `adjustable-web-type.html` — h1 + trimmed masthead (`v0.2` only), input hint + filter flash, reset label/title/flash, preset label, footer split (`.footer-hints` / `.footer-dev`), sentence-case legend copy (circles not squares), `.notes` border-top, toggle off-state contrast + `aria-pressed`, main/section ARIA landmarks, API list `no-num` class (numbered only under Install & mount), page title updated.
+**Implemented (same session):** All critique items applied in `adjustable-web-type.html` — h1 + trimmed masthead, input hint + filter flash, reset label/title/flash, preset label, footer split (`.footer-hints` / `.footer-dev`), sentence-case legend copy (circles not squares), `.notes` border-top, toggle off-state contrast + `aria-pressed`, main/section ARIA landmarks, API list `no-num` class (numbered only under Install & mount), page title updated.
 
 ## Stage actions — Export code download (2026-05-26)
 
@@ -150,3 +262,51 @@ User-approved critique batch landed in `lib/sculpt.js` + demo docs:
 ## Merge conflict resolution (2026-05-26)
 
 Merged `origin/main` into `cursor/font-starter-recommendations-ab18`: add/add on `docs/agent-learnings.md` — combined branch session notes + main’s font-starter doc + branch “Presets implemented” table (no conflicting intent).
+
+## Doc page layout — source link in masthead (2026-05-26)
+
+Demo/docs page (`adjustable-web-type.html`): removed `CHANGES.md` from the footer dev-links strip; moved `lib/sculpt.js` link into the masthead `.left` block beside the site title (`.site-source`, same mono/uppercase/hover styling as the old `.footer-dev` links). Footer now shows handle hints only; `.footer-dev` CSS removed.
+
+## Doc page — GitHub source button (2026-05-26)
+
+Removed masthead `.site-source` text link. `#developer-docs` first sprint block now has a primary `.btn.solid` anchor above **Install & mount**, linking to `https://github.com/lizkhoo/adjustable-web-type/blob/main/lib/sculpt.js` (`target="_blank"`). Button styles generalized from `button.btn` to `.btn` with `a.btn { display: inline-block; text-decoration: none; }`.
+
+## Removed meaningless v0.2 label (2026-05-26)
+
+Masthead `v0.2` / `.site-meta` removed from `adjustable-web-type.html`. It was a hardcoded demo badge with no `package.json` version, git tag, or library constant behind it — not a real release number.
+
+## Implementation evaluation pass (2026-05-26)
+
+End-to-end smoke test against `http://127.0.0.1:5173/adjustable-web-type.html` via CDP. All flows from `docs/snapshot-regression.md` exercised; zero runtime errors across a full preset/axis sweep.
+
+**Verified working**
+
+- Default load: `DeformableOutlineWordmark` with `bubbly` preset, `Hello jazz` text, 10 filled glyph paths (fill `#2a2ae5`), 1 axis handle (bubbliness, range 0–1).
+- All 5 font presets (`bubbly`, `instrumentSerif`, `sourceSans`, `bitter`, `ibmPlexMono`) load OFL outlines from `@fontsource` WOFF via jsDelivr, mount with the correct primary axis handle, and re-render on preset change. `none` preset switches to parametric `Wordmark` with 14 paths, 52 anatomy handles, 13 tangent square anchors.
+- Axis sliders + right-side drag handles wire through `setAxis()`. Path-data delta from `min`→`max`: bubbliness ≈ +524k chars (destructive Bezier→polyline as documented), serifLength ≈ +1–2k chars (extra `M/L` serif stubs), width ≈ +1–1.4k chars (per-glyph horizontal scale).
+- `Static compare` toggle swaps to `OutlineWordmark`, hides handles (handleCount → 0). Toggling back restores deformable handles.
+- `Mouse follow` toggle: parametric mode defaults `tangentOnly: true`; outline mode maps cursor X to the first preset axis. Path data changes after a synthetic `mousemove`.
+- Curvature toggle re-mounts with overridden `defaults.curvature = 0` and back.
+- Handle drag via `PointerEvent` mutates target glyph's path (validated against `capHeight` on glyph 0).
+- `setText` incremental: `Hi` (2 glyphs) → `Hi there` (8 glyphs) with no full remount.
+- Input filter: `!` stripped, empty text falls back to `Hello jazz`.
+- `Reset letters` button reverts to preset defaults in all three modes.
+- Hex color input + swatch update `wm.color` and re-render; works for stroke (parametric) and fill (outline).
+- Export bundle (`toInteractiveBundle()`):
+  - Parametric (`none` preset): 894KB, **0 external script srcs** (DOM-parsed), 2 inline scripts (lib + boot). Sprint 1.2's "no CDN" promise holds.
+  - Deformable outline: 920KB, 1 external script src — `cdn.jsdelivr.net/.../opentype.js@1.3.4/opentype.min.js`. The fontsource WOFF for the active preset is still fetched at runtime by `loadFontForPreset()`. Documented dependency, not a regression.
+  - Both bundles boot in a fresh tab from a blob URL and render the expected SVG (10 paths, mode/preset attributes preserved).
+
+**Notes / minor smells (not bugs)**
+
+- `applyColor()` calls `wm._render()` (underscore-prefixed). Only public surface for color repaint; consider a `setColor()` shim.
+- `syncAxisControls()` sets `range.value` but no `defaultValue` attribute — `input.defaultValue` is the empty string, which equals min when re-assigned. Not user-visible unless a script reads `defaultValue`.
+- Bubbliness at high `t` generates ≈500k+ chars of polyline per glyph; renders fine on M-series Mac but worth profiling on lower-end devices.
+- MCP browser screenshot timed out repeatedly during this session; CDP `Runtime.evaluate` was used to inspect DOM/state instead. Not a project issue.
+
+**How to re-run** Open `http://127.0.0.1:5173/adjustable-web-type.html`, then drive each control from `docs/snapshot-regression.md`. For programmatic verification, the CDP probes used in this evaluation live in chat history under [Evaluate adjustable web type](this-session).
+
+## ERR_CONNECTION_REFUSED on :5173 (2026-05-26)
+
+`ERR_CONNECTION_REFUSED` / curl failure on `http://127.0.0.1:5173/` means nothing is listening on that port — usually Vite was never started or the dev process exited. Fix: from repo root run `npm install` (if needed) then `npm run dev`; keep that terminal open. Entry URL: `http://127.0.0.1:5173/adjustable-web-type.html` (root HTML file, no custom `base` in `vite.config.js`).
+

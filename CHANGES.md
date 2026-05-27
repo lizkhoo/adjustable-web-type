@@ -2,6 +2,8 @@
 
 This fork closes the principle violations and visual-schism issues from the design review of `lizkhoo/sculpt-lettering@653c220`. All changes live in `lib/sculpt.js` (a drop-in single-file build that mirrors `packages/core` at runtime).
 
+> **Product intent:** An exploration toy for non–type-designers — play with letterforms and learn anatomy through handles, not a path to shipping production fonts. See `docs/PRODUCT_INTENT.md`.
+
 To port back to the original repo: each fix below cites the corresponding file in `packages/core/src/`. They are line-for-line transcribable as TS patches.
 
 ---
