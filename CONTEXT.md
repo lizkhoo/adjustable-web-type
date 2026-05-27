@@ -15,7 +15,7 @@ The rendering engine a preset routes to, declared via `preset.pipeline`. Two pro
 - **`outline-deform`** — loads the real WOFF via opentype.js and deforms the outline with one global **preset axis** slider. No per-letter handles. Used by `bubbly`.
 - **`anatomy-deform`** — loads the real WOFF AND exposes per-letter **anatomy handles** anchored on each glyph's bounding box. Dragging a handle applies a per-glyph transform (e.g. `scaleY` from baseline for `height`, `scaleX` from left for `width`, stroke overlay for `weight`). Used by the four readable-text-face presets. Validated in `adjustable-web-type.prototype.html`; production class TBD.
 
-A third engine, the hand-authored parametric `Wordmark`, survives only as the fallback for the `none` preset ("no reference font"). It is *not* used by any named-font preset.
+A third engine, `SandboxWordmark` (the hand-authored Bézier glyphs + monoline factory; renamed from `Wordmark` to reflect its narrowed role), survives only as the fallback for the `none` preset ("no reference font"). It is *not* used by any named-font preset. A `Wordmark` alias is retained in the public exports for backward compatibility with previously-generated `toInteractiveBundle()` HTML files.
 
 ### Preset axis
 A single deformation control attached to a preset in **outline-deform** mode. Exposed in the UI as a global slider plus a right-side drag handle. Operates on the whole wordmark, not per-letter. Today only `bubbly` uses this (axis: `bubbliness`, number of sine-wave bumps per outline contour).
@@ -33,7 +33,7 @@ Anatomy handles are the vocabulary by which non-type-designers discover letterfo
 > The two pipelines deliberately use different handle vocabularies: outline-deform shows preset axes only, anatomy-deform shows per-letter anatomy handles only. There is no global "preset axis" slider on an anatomy-deform preset; per-letter dragging is the gesture.
 
 ### Mood tuning
-A preset's `defaults` and `glyphParams` blocks (lib/sculpt.js around the preset definitions). `defaults` applies to every auto-generated/monoline glyph; `glyphParams` overrides per character. Mood tuning is what makes parametric `Wordmark` look like Instrument Serif vs Bitter vs IBM Plex Mono.
+A preset's `defaults` and `glyphParams` blocks (lib/sculpt.js around the preset definitions). `defaults` applies to every auto-generated/monoline glyph; `glyphParams` overrides per character. Once path α lands, mood tuning matters only for the `none` preset's `SandboxWordmark` output — named-font presets don't render hand-authored Béziers anymore.
 
 ### Handle behavior — click vs mouse-follow
 The user-facing toggle for **how** the handles respond to input. Two modes:

@@ -6,9 +6,9 @@
 
 ## Context
 
-The library has two rendering engines today (`Wordmark` for parametric hand-authored Bézier glyphs, `DeformableOutlineWordmark` for WOFF + a single global axis). A third — the **path α engine** — has been validated in `adjustable-web-type.prototype.html` and is the chosen production target; production class name and lib integration are still in flight (see [handoff-path-alpha.md](../handoff-path-alpha.md)).
+The library has two rendering engines today (`Wordmark` for parametric hand-authored Bézier glyphs — to be renamed `SandboxWordmark` per Brief 1 — and `DeformableOutlineWordmark` for WOFF + a single global axis). A third — the **path α engine, `AnatomyDeformWordmark`** — has been validated in `adjustable-web-type.prototype.html` and is the chosen production target (see [handoff-path-alpha.md](../handoff-path-alpha.md) and [docs/briefs/path-alpha-landing.md](../briefs/path-alpha-landing.md)).
 
-Until this ADR, the demo wired **every named font preset** to `DeformableOutlineWordmark`. Per-letter anatomy handles were only reachable via the `none` preset's parametric `Wordmark`, AND that parametric output didn't visually match the named font — the hand-authored alphabet is not derived from any WOFF. The "scrubbed" sensation from the owner came from picking Instrument Serif and getting either (a) the WOFF with only a global slider, or (b) — via `none` — a generic monoline-with-serifs that didn't read as Instrument Serif.
+Until this ADR, the demo wired **every named font preset** to `DeformableOutlineWordmark`. Per-letter anatomy handles were only reachable via the `none` preset's `Wordmark` engine, AND that hand-authored output didn't visually match the named font — the hand-authored alphabet is not derived from any WOFF. The "scrubbed" sensation from the owner came from picking Instrument Serif and getting either (a) the WOFF with only a global slider, or (b) — via `none` — a generic monoline-with-serifs that didn't read as Instrument Serif.
 
 The α/γ prototype (2026-05-26 → 2026-05-27) put both candidate fixes side-by-side. **Path α won.** Dragging a per-letter handle on the actual loaded Instrument Serif `a` is the experience the owner wanted. Path γ's extra global sliders were useful but felt coarse at the per-letter scale — every letter moved together, not what the user reaches for.
 
@@ -16,7 +16,7 @@ In path α, the WOFF outline is the starting shape. Each glyph gets a small set 
 
 ## Decision
 
-**Each preset declares its own pipeline.** The preset definition specifies whether it routes to `DeformableOutlineWordmark` or to parametric `Wordmark`. The router in `createWordmark()` respects that declaration. Users do not toggle pipelines globally.
+**Each preset declares its own pipeline.** The preset definition specifies whether it routes to `DeformableOutlineWordmark` (outline-deform) or to `AnatomyDeformWordmark` (anatomy-deform). The router in `createWordmark()` respects that declaration. Users do not toggle pipelines globally. The legacy `SandboxWordmark` (renamed from `Wordmark`) services the `none` preset only.
 
 The classification rule for choosing a preset's pipeline:
 
@@ -75,6 +75,6 @@ Additionally:
 10. **State.** `toState()` emits `pipeline: 'anatomy-deform'` + per-letter handle values; `fromState()` reads the discriminator before instantiating.
 11. **Mouse-follow.** Anatomy-deform presets map cursor **X → `weight`** and **Y → `height`**, globally (every glyph's value updates together). Same mapping across all four. Bubbly unchanged (X → `bubbliness`).
 
-The hand-authored parametric `Wordmark` and its glyph modules survive **only** as the engine behind the `none` preset (no reference font). The `axes` field stays on `bubbly` only; it is dead on the four anatomy-deform presets and should be removed from their definitions when path α lands.
+The hand-authored engine (renamed from `Wordmark` to `SandboxWordmark` per Brief 1; `Wordmark` is kept as a backward-compat alias) and its glyph modules survive **only** as the engine behind the `none` preset (no reference font). The `axes` field stays on `bubbly` only; it is dead on the four anatomy-deform presets and should be removed from their definitions when path α lands.
 
 See [handoff-path-alpha.md](../handoff-path-alpha.md) for the full handle table, the production math targets, and the prototype reference.

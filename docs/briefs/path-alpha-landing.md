@@ -45,6 +45,7 @@ Shared rules:
 10. **Remove the dead `axes:` arrays** from `instrumentSerif`, `bitter`, `sourceSans`, `ibmPlexMono`. Keep `axes:` on `bubbly` only (it still drives the bubbliness slider).
 11. **State serialization:** `toState()` on `AnatomyDeformWordmark` emits `{ pipeline: 'anatomy-deform', text, color, padding, glyphs: [{character, handles: {...}}] }`. `fromState()` reads `state.pipeline` before instantiating; legacy bundles without the field default to parametric `Wordmark`. `toInteractiveBundle()` should produce a bundle that boots back into the same engine.
 12. **Mouse-follow mapping:** `enableMouseFollow()` on `AnatomyDeformWordmark` maps **cursor X → `weight`** and **cursor Y → `height`**, applied **globally** to every glyph simultaneously (every `weight` and every `height` move together as the cursor sweeps; per-letter dragging is unaffected). Same mapping for all four anatomy-deform presets. Normalize cursor position against the wordmark's bounding rect; clamp to each handle's range. Bubbly is unchanged: X → `bubbliness`, Y unused.
+13. **Rename `Wordmark` → `SandboxWordmark`.** The old name is misleading now that the four named-font presets route to `AnatomyDeformWordmark`; the legacy class only serves the `none` preset (hand-authored Bézier sandbox). Touch every occurrence in `lib/sculpt.js` and `adjustable-web-type.html`. Add a backward-compat alias `Wordmark: SandboxWordmark` in the lib's public exports so existing `toInteractiveBundle()` HTML files keep booting. `createWordmark()` routes the `none` preset (or any preset where `preset.pipeline` is missing) to `SandboxWordmark`.
 
 **Scope (do not):**
 
@@ -162,6 +163,43 @@ The order is locked: **`weight` → `height` → `serifLength` → `width`.** Re
 Pick whichever is tractable. If neither feels right after a half-day of exploration, document the limitation and leave the prototype's whole-glyph scale in place. Path α was directionally correct already; this is a quality refinement, not a foundational fix.
 
 **Definition of done:** drag `width` on `o` → bowl stretches but stems don't fatten. Compare against the prototype's scale to confirm visual difference.
+
+---
+
+## Brief 5 — Richer Export Code UX
+
+**Prerequisite:** Brief 1 landed (so `toInteractiveBundle()` produces an `AnatomyDeformWordmark`-compatible bundle for the four anatomy-deform presets).
+
+**Goal:** the **Export code** button is the bridge from "user designed a wordmark on the demo site" to "user has the configured library running on their own site for interaction." Today it silently downloads a self-contained HTML file. Make the experience explicit about the contract: the user is exporting *code they will host themselves* with the current configuration baked in.
+
+**Scope (do):**
+
+1. **Replace the silent download with a modal/dialog** triggered by the Export code button. The dialog shows:
+   - A short headline: *"Export your wordmark"* and a one-line subheading explaining this is interactive code to host on your own site.
+   - The library and configuration summary: text, preset, color, mouse-follow state, per-letter handle values count.
+   - Two visible export formats, each with a copy-to-clipboard button AND a download-as-file button:
+     - **Standalone HTML** (the existing `toInteractiveBundle()` output). Good for iframe embed or hosting as its own page. Filename: `sculpt-{slug}.html`.
+     - **Embed snippet** — a `<div id="…"></div>` + `<script src="…/sculpt.js"></script>` + `<script>SculptLettering.createWordmark(...).mount("#…")</script>` block the user can paste into an existing HTML page. References the library by URL (defaults to the user's own host; let them edit the URL inline). The configuration (`text`, `preset`, `color`, per-letter `glyphs` state) is inlined as a JS object literal.
+   - Below the snippets, a short usage note: *"Host `sculpt.js` alongside the page, or point to your own CDN. The library expects opentype.js to be loaded before it for outline-deform / anatomy-deform presets."* Link to `docs/API.md` (once Brief 4 writes it).
+2. **Close-on-escape, focus-trap, click-outside-to-dismiss** — standard modal behavior. Reuse the toggle/button styling already in the demo CSS.
+3. **CTA label stays "Export code"** (no change). Title attribute: *"Export code to embed this wordmark on your own site."*
+4. **Telemetry stub** (optional, no actual reporting): a comment in the click handler noting where an analytics call would go. Don't add an actual analytics dependency.
+
+**Scope (do not):**
+
+- Don't add a CDN dependency or rewrite the export pipeline. The library URL in the embed snippet is a string the user controls; the library bundle still ships from wherever they put it.
+- Don't add framework-specific exports (React, Vue, etc.). Vanilla `<script>` + `mount()` is the contract.
+- Don't add server-side rendering, build-time generation, or anything that requires a build step.
+
+**Definition of done:**
+
+- Click **Export code** → modal opens with the configuration summary visible.
+- Copy the standalone HTML; paste into a file; open it in a browser → wordmark renders with the same state.
+- Copy the embed snippet; paste into a separate HTML page that loads `sculpt.js` from a local path; open it → wordmark renders with the same state.
+- Modal dismisses via Escape, click-outside, and an explicit close button. Focus returns to the **Export code** button.
+- No console errors; existing download flow still available as one of the two formats.
+
+**Verification:** export a wordmark from each of the five presets; round-trip both export formats; confirm per-letter state survives in both cases.
 
 ---
 
