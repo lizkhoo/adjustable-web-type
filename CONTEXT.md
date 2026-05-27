@@ -35,6 +35,13 @@ Anatomy handles are the vocabulary by which non-type-designers discover letterfo
 ### Mood tuning
 A preset's `defaults` and `glyphParams` blocks (lib/sculpt.js around the preset definitions). `defaults` applies to every auto-generated/monoline glyph; `glyphParams` overrides per character. Mood tuning is what makes parametric `Wordmark` look like Instrument Serif vs Bitter vs IBM Plex Mono.
 
+### Handle behavior — click vs mouse-follow
+The user-facing toggle for **how** the handles respond to input. Two modes:
+- **Click-drag** (default) — the user grabs a specific handle on a specific glyph with `pointerdown` and drags. Per-letter precision.
+- **Mouse-follow** — the wordmark continuously responds to cursor position without a click. On **outline-deform** (`bubbly`), cursor X maps to the primary preset axis (`bubbliness`). On **anatomy-deform** (the four readable-text presets), cursor X maps globally to every glyph's `weight` and cursor Y maps globally to every glyph's `height`. Per-glyph `width` / `serifLength` / `descenderDepth` remain click-drag only.
+
+Mouse-follow is a "sweep" gesture for tactile play; click-drag is per-letter precision. The two modes are mutually exclusive — toggling mouse-follow on freezes any pointer-capture from click-drag.
+
 ### Reference outline
 The real WOFF outline of a preset's font, loaded via opentype.js. Available in three modes:
 - **deformed** in outline-deform pipeline (default for outline presets)

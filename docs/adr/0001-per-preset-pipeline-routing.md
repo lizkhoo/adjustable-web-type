@@ -73,6 +73,7 @@ Additionally:
 8. **Mono cell.** `ibmPlexMono` exposes a wordmark-level "mono" toggle (default on). Other presets never see it.
 9. **Reset.** Wordmark-level only.
 10. **State.** `toState()` emits `pipeline: 'anatomy-deform'` + per-letter handle values; `fromState()` reads the discriminator before instantiating.
+11. **Mouse-follow.** Anatomy-deform presets map cursor **X → `weight`** and **Y → `height`**, globally (every glyph's value updates together). Same mapping across all four. Bubbly unchanged (X → `bubbliness`).
 
 The hand-authored parametric `Wordmark` and its glyph modules survive **only** as the engine behind the `none` preset (no reference font). The `axes` field stays on `bubbly` only; it is dead on the four anatomy-deform presets and should be removed from their definitions when path α lands.
 

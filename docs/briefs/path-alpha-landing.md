@@ -44,6 +44,7 @@ Shared rules:
 9. **Wire `adjustable-web-type.html` `mount()`** to call `createWordmark()` and trust routing. Drop any preset-key branching in the demo.
 10. **Remove the dead `axes:` arrays** from `instrumentSerif`, `bitter`, `sourceSans`, `ibmPlexMono`. Keep `axes:` on `bubbly` only (it still drives the bubbliness slider).
 11. **State serialization:** `toState()` on `AnatomyDeformWordmark` emits `{ pipeline: 'anatomy-deform', text, color, padding, glyphs: [{character, handles: {...}}] }`. `fromState()` reads `state.pipeline` before instantiating; legacy bundles without the field default to parametric `Wordmark`. `toInteractiveBundle()` should produce a bundle that boots back into the same engine.
+12. **Mouse-follow mapping:** `enableMouseFollow()` on `AnatomyDeformWordmark` maps **cursor X → `weight`** and **cursor Y → `height`**, applied **globally** to every glyph simultaneously (every `weight` and every `height` move together as the cursor sweeps; per-letter dragging is unaffected). Same mapping for all four anatomy-deform presets. Normalize cursor position against the wordmark's bounding rect; clamp to each handle's range. Bubbly is unchanged: X → `bubbliness`, Y unused.
 
 **Scope (do not):**
 
@@ -60,6 +61,7 @@ Shared rules:
 - Same for `Bitter`, `Source Sans 3`, `IBM Plex Mono`.
 - Pick `Parametric letters (no reference font)` → existing parametric `Wordmark` still mounts (regression).
 - "Reference outlines" toggle still works as a static-compare swap.
+- "Mouse follow" toggle on an anatomy-deform preset → moving the cursor sweeps every glyph's `weight` (X) and `height` (Y) simultaneously; releasing the toggle freezes the values where the cursor last was. On bubbly, mouse-follow X still maps to `bubbliness` (unchanged).
 - `wm.toState()` → `JSON.stringify` → `fromState()` round-trips for each preset; per-letter handle values survive.
 - `Export code` button downloads a self-contained HTML; reopening that HTML renders the same wordmark with the same per-letter handle values.
 - No console errors; no orphaned `pointermove` listeners after preset changes.
