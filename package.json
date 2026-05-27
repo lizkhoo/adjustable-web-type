@@ -1,0 +1,14 @@
+{
+  "name": "adjustable-web-type",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite"
+  },
+  "devDependencies": {
+    "vite": "^6.3.5"
+  },
+  "dependencies": {
+    "opentype.js": "^2.0.0"
+  }
+}

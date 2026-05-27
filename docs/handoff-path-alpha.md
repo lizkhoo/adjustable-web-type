@@ -110,33 +110,28 @@ The prototype does *not* modify `lib/sculpt.js`. To ship Path α for real:
 
 ---
 
-## Open questions to resolve in the grilling session
+## Open questions — resolved in the grill-with-docs session (2026-05-27)
 
-1. **Mono width tension.** Dragging the width handle on `ibmPlexMono` breaks the mono cell visually (gaps appear between letters because the lib still lays them out at `monoCell` spacing). Three options:
-   - **Lock width on mono.** Don't expose the handle. Loses a useful gesture.
-   - **Drop the mono cell when any width handle is dragged.** Re-layout with each letter's actual advance. Loses the mono-ness on touch.
-   - **Add a wordmark-level "mono" toggle.** Default on; turning off relaxes the cell constraint globally so the user knows they've opted out.
+1. **Mono width tension.** ✅ **Wordmark-level "mono" toggle, shown only on `ibmPlexMono`.** Default on (cell constraint enforced; width handle still works under it, visually). Toggling off relaxes the cell globally so the user opts out explicitly. Other presets never see this toggle.
 
-   Recommend: third option. Surface the constraint, let the user opt out explicitly.
+2. **Descender depth.** ✅ **Yes — add a `descenderDepth` handle on the five descender letters** (`g`, `j`, `p`, `q`, `y`). Anchored bottom-center, scales only the below-baseline portion. Same affine-transform primitive as the other handles. Surfaces *descender* as a teaching concept.
 
-2. **Descender depth.** The prototype gives descenders (g, j, p, q, y) a single height handle labeled "x-height" that scales the whole glyph. A real `descenderDepth` handle that scales only the portion below baseline is missing. Worth it, or skip?
+3. **Per-glyph anchor authoring.** ✅ **Bbox-derived by default + per-glyph hand-authored overrides** for problem letters (`f`, `t`, capitals with overhangs, etc.). Keep the override list short. **No programmatic outline sampling** — too brittle for a toy.
 
-3. **Per-glyph anchor authoring.** The prototype uses bbox-derived anchors. Some letters (f, t, capital letters with overhangs) will have anchor positions that don't match the actual anatomy. How much hand-authoring per glyph is acceptable? Or can we measure anatomy points from the WOFF programmatically (e.g. detect x-height by sampling outline at fixed proportions)?
+4. **Color of weight.** ✅ **Stays tied to fill** (same as `wm.color`). The silhouette grows uniformly. Can untie later if a use case appears.
 
-4. **Color of weight.** Currently the weight handle uses `wm.color` for stroke — same as fill. So the silhouette just grows. Should weight stay color-tied, or get its own optional color? (Probably leave tied for now.)
+5. **Reset granularity.** ✅ **Wordmark-level only.** One button, snaps every letter back to defaults. Per-letter and per-handle reset deferred — the toy's audience doesn't need three reset scopes.
 
-5. **Reset granularity.** The reset button currently re-mounts (clears everything). Production likely wants a per-letter reset (right-click handle? double-click?) and a wordmark-level reset. UX design.
-
-6. **Export / state serialization.** The current `wm.toState()` for parametric `Wordmark` serializes `glyphs: [{character, params}]`. The α engine's state shape (per-letter handle values) is different. Needs a versioned format that distinguishes pipelines on re-import.
+6. **State serialization.** ✅ **`toState()` adds a `pipeline: 'anatomy-deform'` discriminator + per-letter handle values** (`glyphs: [{character, handles: {height, width, serifLength, weight, descenderDepth}}]`). `fromState()` reads the discriminator before instantiating. Legacy bundles without a pipeline field default to the parametric `Wordmark` (the only engine that previously produced state).
 
 ---
 
-## What the grilling session needs to confirm before any production change
+## What the grilling session confirmed (2026-05-27)
 
-- The preset `pipeline:` field schema (key name, allowed values, where it slots into the existing preset shape).
-- The naming of the new engine class. Options: `AnatomyDeformableWordmark`, `OutlinePerLetterWordmark`, just extending `DeformableOutlineWordmark` with a `mode: 'preset-axis' | 'per-letter-anatomy'` flag. The grilling session's preference for lib-level names should drive this.
-- Whether the production effort goes through Path α immediately (rewrite `DeformableOutlineWordmark` to expose per-letter handles) or builds Path γ first as a stepping stone (extended outline-deform, then add per-letter handles on top). Recommend **direct to α** since γ is rejected as the user-facing gesture.
-- The order of work for the four production-quality handles. Recommend: `weight` (real outline dilation) is the most independent and ships first; `width` (anatomy-aware partitioning) is the most expensive and ships last; `height` and `serifLength` in between.
+- **`pipeline:` field value for path α:** `'anatomy-deform'` (mirrors `'outline-deform'`; avoids the codename `alpha` and the loaded term `parametric`).
+- **Engine class name:** **`AnatomyDeformWordmark`** — new sibling class in `lib/sculpt.js`, alongside `DeformableOutlineWordmark`. Shares WOFF-loading helpers. Not a subclass; not a mode flag on `DeformableOutlineWordmark`.
+- **Production scope:** **Direct to α.** No path γ stepping stone. γ is rejected as the user-facing gesture; nothing to gain by building it first.
+- **Math depth on first landing:** **Ship the prototype math** (per-glyph affine transforms + SVG stroke for `weight`). Refine each handle's math progressively as separate follow-ups, in order: `weight` → `height` → `serifLength` → `width`.
 
 ---
 
