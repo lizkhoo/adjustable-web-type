@@ -81,7 +81,7 @@
         gap: 10px;
         background: var(--paper-2);
         font-family: var(--mono);
-        font-size: 10px;
+        font-size: 15px;
         letter-spacing: 0.03em;
       }
       .mast .row-secondary .ctrl {
@@ -255,11 +255,11 @@
       }
       .mast .row-secondary button.toggle {
         font-family: var(--mono);
-        font-size: 10px;
+        font-size: 15px;
         letter-spacing: 0.04em;
         text-transform: uppercase;
-        padding: 3px 8px;
-        min-width: 28px;
+        padding: 3px 10px;
+        min-width: 36px;
         border: 1px solid var(--rule);
         color: var(--muted);
         background: transparent;
@@ -272,10 +272,10 @@
         color: var(--paper-2);
       }
       .mast .row-secondary input.hex-input {
-        width: 68px;
+        width: 86px;
         padding: 3px 6px;
         font-family: var(--mono);
-        font-size: 10px;
+        font-size: 15px;
         border: 1px solid var(--rule);
         background: var(--paper);
         color: var(--ink);
@@ -1979,7 +1979,6 @@ wm.setAxis('bubbliness', 0.6);</code></pre>
 
           stage.innerHTML = "";
           wm.mount(stage);
-          if (wm.makeInteractive) wm.makeInteractive();
           if (mouseFollowOn && wm.enableMouseFollow) {
             enableMouseFollowForCurrentMode();
           }
@@ -2257,7 +2256,6 @@ wm.setAxis('bubbliness', 0.6);</code></pre>
               "      wm.mount('#" +
               containerId +
               "');\n" +
-              "      wm.makeInteractive();\n" +
               "      if (state.modes && state.modes.mouseFollow && state.modes.mouseFollow.enabled) {\n" +
               "        wm.enableMouseFollow(state.modes.mouseFollow.opts || {});\n" +
               "      }\n" +
@@ -2269,7 +2267,6 @@ wm.setAxis('bubbliness', 0.6);</code></pre>
               "      wm.mount('#" +
               containerId +
               "');\n" +
-              "      wm.makeInteractive();\n" +
               "      if (state.modes && state.modes.mouseFollow && state.modes.mouseFollow.enabled) {\n" +
               "        wm.enableMouseFollow(state.modes.mouseFollow.opts || {});\n" +
               "      }\n" +
@@ -2291,7 +2288,6 @@ wm.setAxis('bubbliness', 0.6);</code></pre>
               "    wm.mount('#" +
               containerId +
               "');\n" +
-              "    wm.makeInteractive();\n" +
               "    if (state.modes && state.modes.mouseFollow) {\n" +
               "      wm.enableMouseFollow(state.modes.mouseFollow.opts || {});\n" +
               "    }";
