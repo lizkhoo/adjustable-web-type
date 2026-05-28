@@ -469,6 +469,9 @@
       .ctrl.parametric-only[hidden] {
         display: none;
       }
+      .ctrl.mono-only[hidden] {
+        display: none;
+      }
 
       /* ─── Footer strip ────────────────────────────────────────────────── */
       .footer {
@@ -868,6 +871,23 @@
             type="button"
             aria-pressed="true"
             aria-labelledby="t-curv-label"
+          >
+            on
+          </button>
+        </div>
+        <span class="divider mono-only" hidden></span>
+        <div
+          class="ctrl mono-only"
+          hidden
+          data-tip="Snap every glyph to the IBM Plex Mono cell width. Off lets letters reflow to their visual width."
+        >
+          <label id="t-mono-label" for="t-mono">Mono cell</label>
+          <button
+            id="t-mono"
+            class="toggle on"
+            type="button"
+            aria-pressed="true"
+            aria-labelledby="t-mono-label"
           >
             on
           </button>
@@ -1275,11 +1295,13 @@ wm.setAxis('bubbliness', 0.6);</code></pre>
         const hexSwatch = document.getElementById("hex-swatch");
         const tCurv = document.getElementById("t-curv");
         const tMouse = document.getElementById("t-mouse");
+        const tMono = document.getElementById("t-mono");
         const flashEl = document.getElementById("flash");
         const parametricCtrls = document.querySelectorAll(".parametric-only");
         const outlineDeformCtrls = document.querySelectorAll(
           ".outline-deform-only"
         );
+        const monoCtrls = document.querySelectorAll(".mono-only");
         const axisControlsHost = document.getElementById("axis-controls");
         const footerHintOutlineDeform = document.getElementById(
           "footer-hint-outline-deform"
@@ -1296,6 +1318,7 @@ wm.setAxis('bubbliness', 0.6);</code></pre>
 
         let curvatureOn = true;
         let mouseFollowOn = false;
+        let monoCellOn = true; // Brief 2: only meaningful for ibmPlexMono
         let currentPreset = "bubbly";
         let currentColor = "#2a2ae5";
         let wm = null;
@@ -1540,6 +1563,10 @@ wm.setAxis('bubbliness', 0.6);</code></pre>
           });
         }
 
+        function isMonoPreset() {
+          return currentPreset === "ibmPlexMono";
+        }
+
         function updateModeUI() {
           const outlineDeform = isOutlineDeformMode();
           const anatomyDeform = isAnatomyDeformMode();
@@ -1549,6 +1576,9 @@ wm.setAxis('bubbliness', 0.6);</code></pre>
           });
           outlineDeformCtrls.forEach((el) => {
             el.hidden = !outlineDeform;
+          });
+          monoCtrls.forEach((el) => {
+            el.hidden = !isMonoPreset();
           });
           if (outlineDeform || anatomyDeform) {
             outlineDisclaimer.innerHTML = SL.outlineAttributionHtml(
@@ -1633,6 +1663,12 @@ wm.setAxis('bubbliness', 0.6);</code></pre>
             opts.preset = buildPreset();
           } else {
             opts.presetKey = currentPreset;
+          }
+          // Mono-cell toggle only takes effect on presets that declare
+          // `monoCell` (today: ibmPlexMono). Other anatomy-deform presets
+          // ignore the flag entirely.
+          if (isAnatomyDeformMode()) {
+            opts.monoCellEnabled = monoCellOn;
           }
 
           try {
@@ -1773,6 +1809,23 @@ wm.setAxis('bubbliness', 0.6);</code></pre>
           tCurv.classList.toggle("on", curvatureOn);
           tCurv.setAttribute("aria-pressed", String(curvatureOn));
           await mount(safeText(input.value));
+        });
+
+        tMono.addEventListener("click", () => {
+          if (!isMonoPreset()) return;
+          monoCellOn = !monoCellOn;
+          tMono.textContent = monoCellOn ? "on" : "off";
+          tMono.classList.toggle("on", monoCellOn);
+          tMono.setAttribute("aria-pressed", String(monoCellOn));
+          // Live re-layout — no re-mount.
+          if (wm && wm.setMonoCellEnabled) {
+            wm.setMonoCellEnabled(monoCellOn);
+            flash(
+              monoCellOn
+                ? "Mono cell on — letters snap to the IBM Plex Mono cell"
+                : "Mono cell off — letters reflow to visual width"
+            );
+          }
         });
 
         tMouse.addEventListener("click", () => {
