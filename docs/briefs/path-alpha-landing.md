@@ -5,6 +5,7 @@ Four scoped briefs to take the validated path α prototype (`adjustable-web-type
 Each brief is self-contained for a fresh agent landing cold. Copy a brief verbatim into the subagent prompt.
 
 **Shared prerequisites** (every brief assumes these have been read):
+
 - `docs/handoff-path-alpha.md` — the spec, including the resolved-questions table.
 - `docs/adr/0001-per-preset-pipeline-routing.md` — the decision and implementation notes.
 - `CONTEXT.md` — glossary (`preset`, `pipeline`, `outline-deform`, `anatomy-deform`, anatomy handle, mood tuning).
@@ -12,6 +13,7 @@ Each brief is self-contained for a fresh agent landing cold. Copy a brief verbat
 - `docs/PRODUCT_INTENT.md` — toy framing; what is and isn't in scope.
 
 Shared rules:
+
 - `lib/sculpt.js` is one file. Keep it that way.
 - Don't refactor adjacent code while implementing a brief. Bug fix doesn't get a cleanup ride-along.
 - No new dependencies. The library already depends on opentype.js for outline loading; that's the limit.
@@ -123,6 +125,7 @@ The order is locked: **`weight` → `height` → `serifLength` → `width`.** Re
 **Goal:** replace the SVG stroke overlay with true outline dilation (offset path / Minkowski sum). The silhouette grows as if the stroke contrast had thickened, not as if a stroke had been drawn over the fill.
 
 **Scope:**
+
 - Implement a per-glyph offset-path computation on the WOFF `baseCommands`.
 - Approximate is fine — use a polyline-sampled offset (sample the outline densely, displace each sample along its outward normal by `weight * k`, re-emit as polyline). The existing `sampleSubpathDense` helper at `lib/sculpt.js:1415` is a starting point.
 - Apply `paint-order` stays at `fill` (no stroke).
@@ -136,6 +139,7 @@ The order is locked: **`weight` → `height` → `serifLength` → `width`.** Re
 **Goal:** dragging the `height` handle on a lowercase short letter (e.g. `a`, `o`) scales **only** the portion between baseline and x-height. Cap-height, ascender, and descender stay fixed. For uppercase, scale only the cap-height portion (which is already correct because uppercase has no ascender). For ascenders (`b/d/f/h/k/l/t`), scale only the portion above baseline up to x-height OR the full ascender — TBD by the implementing agent (probably the latter, since the label is `ascender`).
 
 **Scope:**
+
 - Path-level region splitting: divide each glyph's outline into baseline-relative bands (descender / x-height / cap-height / ascender) and apply the vertical scale only to the relevant band.
 - Requires knowing where the bands are. Get them from preset-level metrics (`xHeight`, `capHeight`, `ascenderRise`) — those constants already exist in glyph defaults; add them at preset-level if needed.
 
@@ -146,6 +150,7 @@ The order is locked: **`weight` → `height` → `serifLength` → `width`.** Re
 **Goal:** dragging `serifLength` on `a` translates only the serif endpoint segments. Today's prototype scales the entire glyph horizontally — wrong.
 
 **Scope:**
+
 - Detect serif endpoint segments on each glyph's WOFF outline. Heuristic: short horizontal segments at baseline elevation (within `±strokeWeight/2` of `y=0`) that extend beyond the main stem bbox.
 - Translate just those endpoint vertices along the baseline.
 - Skip rule (round-bottom letters) stays in effect.
@@ -157,6 +162,7 @@ The order is locked: **`weight` → `height` → `serifLength` → `width`.** Re
 **Goal:** dragging `width` on `o` scales the bowl/counter horizontally while preserving stem thickness. Today's prototype scales the whole glyph horizontally, which fattens stems.
 
 **Scope:** this is the wormhole. Two practical approaches:
+
 - **a.** Sample stem regions (vertical-segment-dense bands) vs. bowl regions; apply different scale factors. Complex; brittle on heavily slanted faces.
 - **b.** Decompose the outline into "left stem / bowl / right stem" bands per glyph using preset-level anatomy metrics (`bowlWidth`, `strokeWeight`); scale only the bowl band. Cleaner but requires authoring per glyph.
 
@@ -170,19 +176,19 @@ Pick whichever is tractable. If neither feels right after a half-day of explorat
 
 **Prerequisite:** Brief 1 landed (so `toInteractiveBundle()` produces an `AnatomyDeformWordmark`-compatible bundle for the four anatomy-deform presets).
 
-**Goal:** the **Export code** button is the bridge from "user designed a wordmark on the demo site" to "user has the configured library running on their own site for interaction." Today it silently downloads a self-contained HTML file. Make the experience explicit about the contract: the user is exporting *code they will host themselves* with the current configuration baked in.
+**Goal:** the **Export code** button is the bridge from "user designed a wordmark on the demo site" to "user has the configured library running on their own site for interaction." Today it silently downloads a self-contained HTML file. Make the experience explicit about the contract: the user is exporting _code they will host themselves_ with the current configuration baked in.
 
 **Scope (do):**
 
 1. **Replace the silent download with a modal/dialog** triggered by the Export code button. The dialog shows:
-   - A short headline: *"Export your wordmark"* and a one-line subheading explaining this is interactive code to host on your own site.
+   - A short headline: _"Export your wordmark"_ and a one-line subheading explaining this is interactive code to host on your own site.
    - The library and configuration summary: text, preset, color, mouse-follow state, per-letter handle values count.
    - Two visible export formats, each with a copy-to-clipboard button AND a download-as-file button:
      - **Standalone HTML** (the existing `toInteractiveBundle()` output). Good for iframe embed or hosting as its own page. Filename: `sculpt-{slug}.html`.
      - **Embed snippet** — a `<div id="…"></div>` + `<script src="…/sculpt.js"></script>` + `<script>SculptLettering.createWordmark(...).mount("#…")</script>` block the user can paste into an existing HTML page. References the library by URL (defaults to the user's own host; let them edit the URL inline). The configuration (`text`, `preset`, `color`, per-letter `glyphs` state) is inlined as a JS object literal.
-   - Below the snippets, a short usage note: *"Host `sculpt.js` alongside the page, or point to your own CDN. The library expects opentype.js to be loaded before it for outline-deform / anatomy-deform presets."* Link to `docs/API.md` (once Brief 4 writes it).
+   - Below the snippets, a short usage note: _"Host `sculpt.js` alongside the page, or point to your own CDN. The library expects opentype.js to be loaded before it for outline-deform / anatomy-deform presets."_ Link to `docs/API.md` (once Brief 4 writes it).
 2. **Close-on-escape, focus-trap, click-outside-to-dismiss** — standard modal behavior. Reuse the toggle/button styling already in the demo CSS.
-3. **CTA label stays "Export code"** (no change). Title attribute: *"Export code to embed this wordmark on your own site."*
+3. **CTA label stays "Export code"** (no change). Title attribute: _"Export code to embed this wordmark on your own site."_
 4. **Telemetry stub** (optional, no actual reporting): a comment in the click handler noting where an analytics call would go. Don't add an actual analytics dependency.
 
 **Scope (do not):**
@@ -243,3 +249,56 @@ Pick whichever is tractable. If neither feels right after a half-day of explorat
 - New `agent-learnings.md` and `CHANGES.md` entries summarize the path-α landing without re-deriving every decision.
 
 **Verification:** open the repo from a fresh terminal; follow the README's "Where to read next" sequence; confirm the docs lead an incoming agent to a correct mental model of the shipped library without needing to read `lib/sculpt.js`.
+
+---
+
+## Brief 7 — Per-letter handle overrides + counter contour
+
+**Prerequisite:** Brief 3 landed (in particular 3b region-clipped height and 3d anatomy-aware width). Brief 7 builds on the path-region partitioning Brief 3 introduces.
+
+**Goal:** the anatomy-deform vocabulary today is preset-uniform — every letter in a preset gets the same handle set (e.g. Instrument Serif → `[height, width, serifLength, weight]` for every letter). Liz wants **letter-specific additions** on top of the preset baseline, so that pedagogical anatomy parameters reach the letters where they actually live:
+
+- **x-height-only scaling** on lowercase letters whose x-height reads independently (a, e, m, n, o, r, s, u, v, w, x, z). Currently `height` on these is labelled "x-height" but the math scales the whole bbox.
+- **serifLength on serif fonts** is already in scope of 3c; this brief should confirm it remains letter-aware after that work lands.
+- **Counter contour** on letters with an enclosed counter, for non-mono, non-bubble presets (so Instrument Serif, Bitter, Source Sans). Affected letters: `O`, `b`, `d`, `e`, `o`, `p`, `q`, `g`, `a`, `D`, `P`, `Q`, `R` — anything with an enclosed inner region.
+
+**Scope (do):**
+
+1. **Add a per-letter handle override mechanism** to the preset schema:
+   - New optional preset field: `letterHandles: { [character]: [...handleIds] }`. When present for a given character, those handle IDs are _added_ to (or replace? see open question) the preset's default `handles:` array for that character only.
+   - `anatomyHandleIdsFor(character, presetHandles, letterHandles)` resolves the final per-letter set.
+   - Round-bottom skip (`ANATOMY_NO_BASELINE_SERIF`) still applies on top.
+
+2. **Add `counterContour` as a new handle ID** in `AnatomyDeformWordmark`:
+   - Anchor: center of the glyph's inner counter (heuristic: centroid of the largest enclosed subpath).
+   - Transform: scales the inner subpath(s) horizontally and vertically about the counter's centroid. Outer contour stays put. Implementation depends on Brief 3's path-region splitting — reuse the same band/region machinery.
+   - Tooltip label: `counter on '{character}'`.
+   - Range: 0.6 to 1.4 (default 1.0). Tighter than `width` because counter changes are visually strong.
+   - Mouse-follow: not mapped (the global X/Y mapping already takes weight/height).
+
+3. **Wire counter contour into the three relevant presets** via the new `letterHandles` field:
+   - `instrumentSerif`, `bitter`, `sourceSans`: add `counterContour` to `O, b, d, e, o, p, q, g, a, D, P, Q, R`. Skip on `ibmPlexMono` (mono spacing makes counter manipulation visually noisy) and `bubbly` (bubbliness already overrides the counter aesthetic).
+
+4. **Wire x-height-only scaling** for the appropriate lowercase letters via `letterHandles`. The handle ID stays `height` but the override declares it should clip to the x-height band only. The actual region-clipped math comes from Brief 3b — Brief 7 just declares the letter-level intent.
+
+**Scope (do not):**
+
+- Don't introduce a contrast axis, optical sidebearings, or other production-font features. This stays a pedagogy toy.
+- Don't add the override to every letter "just because." Each entry needs a pedagogical reason (the letter has a counter worth showing; the letter's x-height is visually distinct).
+- Don't touch `Wordmark` (SandboxWordmark) or `DeformableOutlineWordmark`. Letter-level overrides are an anatomy-deform concept.
+
+**Open design question:** does `letterHandles[character]` _add to_ or _replace_ the preset's default handles for that character?
+
+- **Add to (recommended):** simpler mental model — letters get the preset baseline plus their overrides. A letter never has fewer handles than the preset declares.
+- **Replace:** more flexible — could declare "this letter gets ONLY these handles" to e.g. hide `serifLength` from `O` (which already happens via the round-bottom skip set, so this case is covered without override).
+
+**Definition of done:**
+
+- `Hello` with Instrument Serif → `e` and `o` each show a `counter on '{char}'` handle. Dragging shrinks/grows the inner counter; outer stroke stays.
+- `Hello jazz` with Bitter → `o`, `a` show counter handles; `H`, `l`, `j`, `z` do not.
+- IBM Plex Mono → no counter handles on any letter (preset opt-out).
+- `toState()`/`fromState()` round-trips the new handle values per-letter.
+- Counter contour values survive in exported bundles.
+- `aximul` typed in Source Sans → only letters with counters (`a`) show the handle.
+
+**Verification:** walk `docs/snapshot-regression.md` plus a Brief 7 addendum: type `Bodega` in Instrument Serif; counter handles on B, o, d, e; drag each; verify only that letter's counter changes.
