@@ -5,6 +5,7 @@
 **Problem:** Font presets conflated static `OutlineWordmark` (real woff paths, no handles) with parametric `Wordmark` (handles on internal glyphs). Users expected handles to edit Rubik Bubbles / Bitter outlines.
 
 **Resolution:**
+
 - **`DeformableOutlineWordmark`** — primary path for `createWordmark()` + demo when a reference face is selected. Stores opentype `baseCommands`, rebuilds `pathData` via preset **axes** (`bubbliness`, `serifLength`, `width`).
 - **`OutlineWordmark`** — `renderMode: 'outline-static'` / demo **Static compare** toggle only.
 - **`Wordmark`** — `renderMode: 'parametric'` / preset `none` (pedagogy + fallback if outline load fails per glyph).
@@ -56,7 +57,6 @@
 
 **Verify:** `npm run dev` → load page → 50+ handle circles on `Hello jazz` → drag a handle → toggle **Mouse follow** → letters morph with cursor → toggle **Reference outlines** on → filled font paths, upright, no handles → toggle off → handles return.
 
-
 Demo `#preset` custom combobox showed `bubbly · Rubik Bubbles`-style labels (preset key + `fontRef`). User-facing labels use `fontRef` only (`Rubik Bubbles`, `Instrument Serif`, …); internal `value` / `data-value` keys unchanged (`bubbly`, `instrumentSerif`, …). `lib/sculpt.js` `fontRef` was already correct.
 
 **Bug source (labels still wrong after docs-only pass):** `PRESET_LABELS` in `adjustable-web-type.html` still held `key · fontRef` strings; `syncPresetPicker()` sets `#preset-trigger-label` from that map on `initPresetPicker()` and every preset change, overwriting any corrected static HTML. Static markup also still had descriptors on hidden `<option>` text and `#preset-listbox` `<li>` nodes (not updated by JS). Fix: align `PRESET_LABELS`, trigger span, options, and list items to font-only labels. Trigger `min-width` reduced from `35ch` to `27ch` (longest: `No preset (glyph defaults)`).
@@ -82,6 +82,7 @@ Demo `#preset` custom combobox showed `bubbly · Rubik Bubbles`-style labels (pr
 **Issue:** Choosing a preset updated the combobox label (reference web font in the trigger) but the sculpted SVG in `#stage` stayed on the initial mood — most visibly on `main`, where `buildPreset()` always returned `SculptLettering.presets.bubbly` regardless of `currentPreset`.
 
 **Fix:**
+
 - `buildPreset()` reads `SculptLettering.presets[currentPreset]` and deep-clones `glyphParams` per character.
 - Added `Wordmark.setPreset(preset)` — re-applies `resolvePresetParams` to every glyph and re-renders (refreshes mouse-follow rest snapshot when active).
 - Demo uses `applyPreset(value)` from the custom combobox and hidden `<select>` change handler; updates the live wordmark via `wm.setPreset()` instead of relying on a synthetic `change` event alone.
@@ -94,6 +95,7 @@ Demo `#preset` custom combobox showed `bubbly · Rubik Bubbles`-style labels (pr
 **Issue:** Preset picker appeared to do little on default text `hello world` — that string uses only curated glyphs (`h e l o w r d` + space). Preset `defaults` (curvature, slant, monoline `width`) apply to auto-generated/monoline letters only; curated letters rely on `glyphParams`. Users expected Rubik Bubbles / Instrument Serif / Plex Mono moods to show up immediately.
 
 **Fixes:**
+
 - `resolvePresetParams()` in `lib/sculpt.js` now merges `defaults` then overlays `glyphParams[ch]` per key (not wholesale replacement).
 - `toState()` / `toInteractiveBundle()` now serialize `preset` key and restore it on embed boot so new letters keep the mood.
 - Demo default text → `Hello jazz` (curated + monoline mix so curvature/slant/width defaults are visible).
@@ -130,7 +132,7 @@ Demo `#preset` custom combobox showed `bubbly · Rubik Bubbles`-style labels (pr
 **Why prior versions failed:**
 
 - v1 (uniform glyph-centroid scale, `sx = 1 + t*0.12`): scaled outer + inner counters identically, so strokes never thickened; total expansion 12–16% was invisible on already-puffy Rubik Bubbles.
-- v2 (per-subpath bipolar inflate/deflate with shoelace-based outerSign): user clarified the metaphor is *bump count*, not *volume*. Replaced.
+- v2 (per-subpath bipolar inflate/deflate with shoelace-based outerSign): user clarified the metaphor is _bump count_, not _volume_. Replaced.
 
 **Limits:**
 
@@ -144,6 +146,7 @@ Demo `#preset` custom combobox showed `bubbly · Rubik Bubbles`-style labels (pr
 **Issue:** At ~853px viewport, `row-secondary` overflowed because `.preset-picker__trigger` had a hard `min-width: 38ch` (~295px) and the wrapping `.ctrl:first-child` used `flex-shrink: 0`. With outline-deform mode adding a `BUBBLINESS` slider, total content > container, so the row clipped horizontally instead of fitting on one line.
 
 **Fix in `adjustable-web-type.html`:**
+
 - Preset picker is the only flex item allowed to shrink:
   - `.row-secondary .ctrl:first-child` → `flex: 0 1 auto; min-width: 0`.
   - `.preset-picker` → `flex: 1 1 auto; min-width: 0`.
@@ -198,13 +201,13 @@ Users asked for five popular OFL/Google Fonts starter categories: fun/bubbly, el
 
 ### Recommended defaults (one per slot)
 
-| Slot | Primary pick | Why | License / delivery |
-|------|--------------|-----|-------------------|
-| Fun / bubbly | [**Rubik Bubbles**](https://fonts.google.com/specimen/Rubik+Bubbles) | Inflated, rounded letterforms; unmistakably bubbly display face | SIL OFL 1.1, Google Fonts |
-| Elegant curved serif | [**Instrument Serif**](https://fonts.google.com/specimen/Instrument+Serif) | Soft curves, refined contrast; already used in demo UI chrome | SIL OFL 1.1, Google Fonts |
-| Neutral utilitarian sans | [**Source Sans 3**](https://fonts.google.com/specimen/Source+Sans+3) | Adobe’s neutral workhorse; clear, utilitarian, strong readability | SIL OFL 1.1, Google Fonts |
-| Rectangular / slab serif | [**Bitter**](https://fonts.google.com/specimen/Bitter) | Contemporary slab with rectangular serifs; designed for screen readability | SIL OFL 1.1, Google Fonts |
-| Monospaced | [**IBM Plex Mono**](https://fonts.google.com/specimen/IBM+Plex+Mono) | Neutral, engineered mono; distinct from sans while staying utilitarian | SIL OFL 1.1, Google Fonts |
+| Slot                     | Primary pick                                                               | Why                                                                        | License / delivery        |
+| ------------------------ | -------------------------------------------------------------------------- | -------------------------------------------------------------------------- | ------------------------- |
+| Fun / bubbly             | [**Rubik Bubbles**](https://fonts.google.com/specimen/Rubik+Bubbles)       | Inflated, rounded letterforms; unmistakably bubbly display face            | SIL OFL 1.1, Google Fonts |
+| Elegant curved serif     | [**Instrument Serif**](https://fonts.google.com/specimen/Instrument+Serif) | Soft curves, refined contrast; already used in demo UI chrome              | SIL OFL 1.1, Google Fonts |
+| Neutral utilitarian sans | [**Source Sans 3**](https://fonts.google.com/specimen/Source+Sans+3)       | Adobe’s neutral workhorse; clear, utilitarian, strong readability          | SIL OFL 1.1, Google Fonts |
+| Rectangular / slab serif | [**Bitter**](https://fonts.google.com/specimen/Bitter)                     | Contemporary slab with rectangular serifs; designed for screen readability | SIL OFL 1.1, Google Fonts |
+| Monospaced               | [**IBM Plex Mono**](https://fonts.google.com/specimen/IBM+Plex+Mono)       | Neutral, engineered mono; distinct from sans while staying utilitarian     | SIL OFL 1.1, Google Fonts |
 
 ### Strong alternates
 
@@ -224,13 +227,13 @@ Users asked for five popular OFL/Google Fonts starter categories: fun/bubbly, el
 
 All five font-starter slots are now exposed as `SculptLettering.presets` and in the demo preset picker:
 
-| Preset key | Font reference | Mood tuning |
-|------------|----------------|-------------|
-| `bubbly` | Rubik Bubbles | Heavy stroke, high curvature, round bowls |
-| `instrumentSerif` | Instrument Serif | Lighter stroke, high tension, slight slant |
-| `sourceSans` | Source Sans 3 | Neutral defaults, zero curvature |
-| `bitter` | Bitter | Heavy stroke, low tension (rectangular slabs) |
-| `ibmPlexMono` | IBM Plex Mono | Uniform `width: 92` cell, compact proportions |
+| Preset key        | Font reference   | Mood tuning                                   |
+| ----------------- | ---------------- | --------------------------------------------- |
+| `bubbly`          | Rubik Bubbles    | Heavy stroke, high curvature, round bowls     |
+| `instrumentSerif` | Instrument Serif | Lighter stroke, high tension, slight slant    |
+| `sourceSans`      | Source Sans 3    | Neutral defaults, zero curvature              |
+| `bitter`          | Bitter           | Heavy stroke, low tension (rectangular slabs) |
+| `ibmPlexMono`     | IBM Plex Mono    | Uniform `width: 92` cell, compact proportions |
 
 ## Type-design-expert skill + library critique (2026-05-26)
 
@@ -310,3 +313,15 @@ End-to-end smoke test against `http://127.0.0.1:5173/adjustable-web-type.html` v
 
 `ERR_CONNECTION_REFUSED` / curl failure on `http://127.0.0.1:5173/` means nothing is listening on that port — usually Vite was never started or the dev process exited. Fix: from repo root run `npm install` (if needed) then `npm run dev`; keep that terminal open. Entry URL: `http://127.0.0.1:5173/adjustable-web-type.html` (root HTML file, no custom `base` in `vite.config.js`).
 
+## Brief 3a + 3b landed — weight dilation + region-clipped height (2026-05-30)
+
+**Shipped.** Two of the four locked handle-math upgrades (`weight → height → serifLength → width`) are now production-grade in `AnatomyDeformWordmark`:
+
+- **3a `weight`** — `dilateOutline(commands, delta)` replaces the SVG stroke halo. Densely samples each contour, displaces samples along the outward normal of the filled region, re-emits a polyline. Rotation sense keyed off the largest-area (outer) contour so positive delta grows the silhouette; counters (opposite winding) shrink automatically. Stroke-overlay fallback kept for degenerate glyphs.
+- **3b `height`** — `bandScaleY(commands, f, bandTopY)` scales only the band between baseline (y=0) and the x-height line, pinned at baseline. Lowercase clips to x-height; uppercase clips to cap-height. Applied path-level in `_resolveGlyphPath` (replaces the old whole-glyph CSS scale in `_transformFor`). Height runs _before_ weight dilation so stroke contrast stays uniform.
+
+**Non-obvious gotcha — overshoot.** Round letters (`o e c O…`) optically overshoot the x-height/cap line by ~1–2.5% so they don't read short. If the band top sits exactly at the x-height metric (derived from flat-topped `x`), the overshoot sliver of an `o` falls _outside_ the scaled band and pins — the `o` shrinks but leaves a stuck nub at the top. Fix: pad the band metrics by 3% (`OVERSHOOT = 1.03`) so round-letter overshoot stays inside the band. Caught only by browser-testing real fonts, not synthetic-glyph unit tests. The band machinery (and this overshoot pad) will be reused by 3c/3d and Brief 7's counter contour.
+
+**Metrics source.** `getAnatomyBandMetrics(presetKey, fontSize)` derives x-height/cap-height empirically from the bounding boxes of `x` and `H` (top = `-bounds.minY`), not the OS/2 table — robust for any loaded WOFF. Cached per preset+fontSize.
+
+**Verification.** Pure-math unit tests (extracted the shipped functions, ran in node) + a headless-Chrome harness against real fonts: `b` ascender top pins at -740 while height halves; `o` top scales -516→-258 (whole glyph); `H` cap grows 1.5×; all four anatomy presets render with zero console errors and `toState()` round-trips the height change. Still TODO: 3c (`serifLength` anchor translation), 3d (`width` partitioning).
