@@ -302,3 +302,66 @@ Pick whichever is tractable. If neither feels right after a half-day of explorat
 - `aximul` typed in Source Sans → only letters with counters (`a`) show the handle.
 
 **Verification:** walk `docs/snapshot-regression.md` plus a Brief 7 addendum: type `Bodega` in Instrument Serif; counter handles on B, o, d, e; drag each; verify only that letter's counter changes.
+
+---
+
+## Brief 8 — Interaction polish: bubbly axis feel + anatomy node / tooltip / cursor
+
+**Prerequisite:** Brief 3 and Brief 7 have landed. They are currently **uncommitted in the working tree** (`lib/sculpt.js`) — build on top of that state, do not revert it. Read `lib/sculpt.js` first; line numbers in this brief are approximate (the file shifts), so navigate by the named functions/classes called out below.
+
+**Goal:** close six interaction-quality gaps the demo owner hit while testing. Three are on the **bubbly** preset (`DeformableOutlineWordmark`, `pipeline: "outline-deform"`); three are on the **anatomy-deform** presets (`AnatomyDeformWordmark` — Instrument Serif, Bitter, Source Sans, IBM Plex Mono). This is feel/tuning + one real positioning change; it is **not** a new feature axis. Verify every item live with the Playwright MCP browser against `http://127.0.0.1:5173/adjustable-web-type.html` (start `npm run dev` first; the favicon 404 is the only benign console error — everything else should be zero). `browser_evaluate` is the reliable probe; `browser_take_screenshot` works for visual judgement and is required for the bubbliness/amplitude and tooltip items.
+
+### Part A — Bubbly preset (`DeformableOutlineWordmark` / `bubbly`)
+
+**A1 — Center the bubbliness slider (bidirectional).** The `bubbly.axes` `bubbliness` axis is `{ min: 0, max: 1, default: 0 }`, and `applyBubbliness` does `bumpCount = round(t * BUMPS_MAX)` (`BUMPS_MAX = 20`). Default at the far-left min means the slider can only add bubbles, never remove. Change `bubbliness.default` to `0.5` so the slider rests in the middle: left reduces the **synthetic** bumps toward 0, right adds more (up to 20).
+
+- **Important nuance — there is a floor.** Rubik Bubbles' native WOFF outline is already bubbly; `bubbliness` is an _additive_ sine-bump deformer on top of that outline. So `bubbliness = 0` is the raw native font, and "decrease" only removes the synthetic additions down to native — it does **not** smooth the font's inherent bubbles. That is the correct, in-scope behavior. **Do not** attempt to flatten below the native outline.
+- Confirm the demo's axis slider initializes its thumb from the axis `default` (via `defaultAxisValuesForPreset`) so it starts centered, and that **Reset** returns it to `0.5` (watch the `syncAxisControls` / `defaultValue` seam noted in `docs/agent-learnings.md`).
+- If `0.5 → max` still doesn't add _visibly_ more bubbles than native, raising `BUMPS_MAX` modestly (e.g. 24–28) is in scope; keep it tasteful.
+
+**A2 — Make amplitude noticeable.** `applyBubbliness` sets `amplitude = glyphSize * 0.12 * ampNorm * Math.sqrt(t)` (`ampNorm` ∈ 0..1, axis default 0.5). The owner reports the amplitude slider barely reads. Increase the coefficient (start ~`0.20`–`0.24`, i.e. ~1.6–2×) and tune by eye in the browser so sweeping the **Amplitude** slider min→max is an obvious change in bump height at a normal bubbliness. Keep `ampNorm = 0` still flattening synthetic bumps to nothing. Note: high amplitude × high bubbliness inflates per-glyph polyline length (documented ~500k chars); fine on target hardware, but don't add a new multiplier that makes it pathological.
+
+**A3 — Mouse-follow X→bubbliness, Y→amplitude, actually visible.** The mapping already exists in `DeformableOutlineWordmark._applyMouseFollow` (primary axis = X, secondary = Y; bubbly's secondary is `amplitude`). It reads as broken mostly _because_ of A1: with `bubbliness` resting at min, X-from-center only reaches the top half rightward and nothing leftward. After A1 (rest = 0.5) the X sweep becomes bidirectional. Then:
+
+- Remove or raise the `range * 0.5` halving in `_applyMouseFollow` so traversing the viewport reaches (or nearly reaches) each axis's full min..max; tune `strength`/`clamp` in `enableMouseFollow` to match.
+- Verify the right-side axis slider thumbs visibly move as the cursor drives the values (they re-render through `_render`), and that disabling mouse-follow restores the rest snapshot.
+- DoD: with mouse-follow on, moving the cursor left↔right is clearly fewer↔more bubbles and up↔down is clearly smaller↔bigger bubbles, across the visible word.
+
+### Part B — Anatomy-deform presets (`AnatomyDeformWordmark`)
+
+**B1 — Control nodes sit ON the letterform edge and track it (DECIDED: on-edge, tracking).** Today `_computeHandlePositions` places each node at a **static, base-bbox** anchor offset ±18u _outside_ the glyph, derived from `g.bounds` (the _undeformed_ bounds) — so nodes float beside the letter and never move as it deforms. Change them to land on the **live deformed outline** and ride the vectors:
+
+- Drive positions from the **deformed** command list, not `g.bounds`. `_resolveGlyphPath(g)` already computes the deformed path (and memoizes it); expose/borrow the deformed command array (or its bounds + edge samples) so `_computeHandlePositions` can find real outline points. Recompute every `_render()` (already called on each drag move) so the node tracks the shape continuously.
+- Edge point per handle (drag mechanics unchanged — `width` still drags horizontally, etc.):
+  - `width` (ew-resize): rightmost outline point near vertical mid → on the right stroke edge.
+  - `height` (ns-resize): topmost outline point near horizontal mid → on the top edge (ascender / cap / x-height as appropriate).
+  - `serifLength` (ew-resize): a serif-foot terminal — an outline point near the baseline (y ≈ 0) on the right.
+  - `weight` (ew-resize): leftmost outline point near vertical mid → on the left stroke edge (replaces today's left-floating anchor).
+  - `descenderDepth` (ns-resize): bottom-most outline point → on the descender terminal.
+  - `counterContour` (move/nwse-resize): **stays at the counter centroid** (already interior — `counterCentroid` from Brief 7). Do not move it to the rim.
+- Place the **visible** dot centered on the edge point (a ~1-handle-radius nudge outward along the local outward normal is OK so the dot reads as sitting on the rim rather than buried under the fill). Keep the **hit area** generous (current ~18u) so it stays easy to grab even though the visible dot is small and on-edge.
+- Honor the existing `ANATOMY_ANCHOR_OVERRIDES` intent where it still makes sense (e.g. `f`/`t`/`J` height anchor), but these were bbox-fraction hacks; on real outline points several may become unnecessary — drop an override only if the on-edge point is clearly better, and say so in the learnings.
+
+**B2 — Minimal, no-box tooltips (DECIDED: minimal).** Replace the white-box + hard-ultramarine-border chip in `AnatomyDeformWordmark._renderTooltip` with the lightest treatment: ultramarine (`--ultramarine #1a2f6e`) **mono** text — label in the page mono face, value bold — on a faint `--paper` underlay (a low-opacity rounded rect or soft halo just for legibility over the glyph), **no border, no chip outline**. Smallest possible visual footprint. Reuse the page's tokens/fonts (`--mono`, `--ultramarine`, `--paper`) so it reads as part of the page, not a separate widget. Keep the existing show/hide + pin-on-drag logic and the fontSize-relative scaling (the viewBox is ~1000u tall, so text must scale up to read after the CSS down-scale). Apply the same treatment to the `DeformableOutlineWordmark` tooltip so bubbly matches.
+
+**B3 — Resize cursor in the hit zone.** The anatomy hit circles set the pointer via the SVG presentation **attribute** `cursor="ns-resize"` etc. (`_renderHandles`), which isn't reliably honored. Emit it in the inline **style** instead — `style="cursor:<x>;touch-action:none"` — so hovering the hit area shows a double-sided arrow indicating the interaction zone:
+
+- `ns-resize` for `height`, `descenderDepth`; `ew-resize` for `width`, `serifLength`, `weight`; `move` (or `nwse-resize`) for `counterContour`.
+- Apply the same attribute→inline-style fix to `DeformableOutlineWordmark` (and `SandboxWordmark`) handles, which currently use `cursor="grab"`; the bubbly right-side axis sliders move vertically, so `ns-resize` is appropriate there (or keep `grab`/`grabbing` if that reads better — implementer's call, but it must actually show on hover).
+- Check no page-level CSS (`adjustable-web-type.html`) sets a `cursor` on the SVG that overrides these.
+
+**Scope (do not):**
+
+- No new axes, handles, or presets. No contrast/optical features. This is feel + one positioning change.
+- Don't touch the per-letter deformation math (Brief 3/7) — B1 only changes where the node is _drawn_ and what point it reads, not how the outline deforms.
+- Don't smooth Rubik Bubbles below its native outline (A1 nuance).
+- Don't refactor adjacent code for its own sake (shared rule above).
+
+**Definition of done:**
+
+- Bubbly: slider rests centered; left = toward native (fewer synthetic bubbles), right = more. Amplitude slider sweep is an obvious change. Mouse-follow: X = fewer↔more bubbles bidirectionally, Y = smaller↔bigger, both visibly spanning their range; right-side thumbs track; disable restores.
+- Anatomy: each node is drawn on the live deformed outline edge (counter node at centroid) and moves continuously as you drag any handle on that glyph; nodes stay grabbable; hovering a hit area shows the correct double-arrow cursor.
+- Tooltips are the minimal no-box treatment, coherent with page tokens, in both anatomy and bubbly modes.
+- `toState()/fromState()` and export bundles still round-trip (positioning/cursor/tooltip are view-only; no state shape change). Zero console errors beyond the favicon 404.
+
+**Verification:** start `npm run dev`; via Playwright MCP — (bubbly) screenshot the word at bubbliness min / center / max and amplitude min / max to confirm the visual range, and drive a synthetic `mousemove` sweep with mouse-follow on to confirm both axes move; (anatomy) Instrument Serif `Hello jazz`, drag `width`/`height`/`weight`/`serifLength` and confirm each node stays on the moving outline edge, screenshot to confirm on-edge placement and the minimal tooltip, and assert the hit circle's inline `style` carries the resize cursor. Update `docs/agent-learnings.md` with a Brief 8 entry (especially: the bubbliness native-outline floor, the deformed-outline edge-point sourcing, and any `ANATOMY_ANCHOR_OVERRIDES` made redundant).
