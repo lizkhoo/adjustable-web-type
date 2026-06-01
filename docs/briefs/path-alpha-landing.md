@@ -365,3 +365,61 @@ Pick whichever is tractable. If neither feels right after a half-day of explorat
 - `toState()/fromState()` and export bundles still round-trip (positioning/cursor/tooltip are view-only; no state shape change). Zero console errors beyond the favicon 404.
 
 **Verification:** start `npm run dev`; via Playwright MCP — (bubbly) screenshot the word at bubbliness min / center / max and amplitude min / max to confirm the visual range, and drive a synthetic `mousemove` sweep with mouse-follow on to confirm both axes move; (anatomy) Instrument Serif `Hello jazz`, drag `width`/`height`/`weight`/`serifLength` and confirm each node stays on the moving outline edge, screenshot to confirm on-edge placement and the minimal tooltip, and assert the hit circle's inline `style` carries the resize cursor. Update `docs/agent-learnings.md` with a Brief 8 entry (especially: the bubbliness native-outline floor, the deformed-outline edge-point sourcing, and any `ANATOMY_ANCHOR_OVERRIDES` made redundant).
+
+---
+
+## Brief 9 — Code-review fixes: handle-node tracking + counter correctness
+
+**Prerequisite:** Briefs 3, 7, 8 have landed (committed). Read `lib/sculpt.js` first; line numbers below are from the current HEAD and will drift — navigate by the named functions. These fixes come from a high-effort review of the Brief 7/8 diff; finding numbers `(#n)` reference that review.
+
+**Goal:** five behavioral defects, all in `AnatomyDeformWordmark`, where a control node detaches from the letterform it controls or an override silently stopped applying. Items 1–2 partially undo Brief 8 B1's promise ("nodes ride the live deformed edge") on the two handles B1 never routed through the edge sampler. Verify every item live with Playwright MCP against `http://127.0.0.1:5173/adjustable-web-type.html` (`npm run dev` first; favicon 404 is the only acceptable console error). `browser_evaluate` is the reliable probe; screenshot the behavioral ones.
+
+**Scope (do):**
+
+1. **(#1 — high) `descenderDepth` handle node must track the stretched descender.** The `descenderDepth` handle uses the `bottomCenter` anchor → `edges.bottom` from `_deformedEdgePoints` (~7100), but `descenderDepth` is **not** a path-level deform — it's applied as a `scale(1 dd)` wrap-group transform in `_glyphMarkup` (~6796–6808), so the sampled `cmds` never reflect it. Worse, `_deformedEdgePoints`' `_edgeCache` stateKey (~6937–6948) omits `descenderDepth`, so dragging it doesn't even bust the cache.
+   - Make the descender node follow the live stretched terminal: either fold `descenderDepth` into the sampled geometry (scale the below-baseline sampled points by `dd` when computing `edges.bottom`), or compute the descender node's `hy` as `baselineY + edges.bottom.y * dd` for descender letters. Add `descenderDepth` to the `_edgeCache` stateKey either way.
+   - DoD: drag `descenderDepth` on `g/j/p/q/y` → the node rides the descender terminal down/up continuously (not just after some other handle moves).
+
+2. **(#2 + #5 — medium-high) `counterContour` node and scale pivot must be the same point, and it must track.** The handle is anchored at `counterCentroid(g.baseCommands)` (cached `g._counterCentroid`, ~7113), but `counterScale` (3685–3690) pivots about `counterCentroid(commands)` of the **width/height-deformed** outline, recomputed every frame. Under a non-default `width`/`height` the dot and the scale pivot diverge; the recompute is also wasted hot-path work.
+   - Establish a **single source of truth** for the counter centroid and use it for both the handle anchor and the scale pivot so they can never diverge. Recommended (deepest, also satisfies the altitude note that the counter node opted out of the shared live-edge mechanism): compute the centroid from the **live deformed** outline — `_deformedEdgePoints` already splits the deformed `cmds`, so have it also return `edges.counter` (centroid of the largest counter subpath), drive the handle from that, and pass the same centroid into `counterScale` (give it a `center` param instead of recomputing). Minimum acceptable: pass the cached base centroid into `counterScale` so pivot == anchor (kills the divergence and the recompute), accepting the node stays at the base centroid.
+   - DoD: with `width=1.4` on `e`, the counter dot sits on the counter it scales, and dragging it grows the counter symmetrically about the dot; no per-frame `counterCentroid` recompute remains in the drag path.
+
+3. **(#3 — medium) Restore `ANATOMY_ANCHOR_OVERRIDES` for non-`top` anchors, or drop them deliberately.** After the Brief 8 rewrite only the `top` branch reads `ov`/`xFrac` (~7048); the `right`/`left`/`bottomRight`/`bottomCenter` branches never consult `ov`, so every xFrac/yFrac override on those anchors is silently dead. Today that means `f`'s `width:{xFrac:0.62}` is inert, and the `f`/`t`/`J` `height:{yFrac}` nudges no longer apply (the `top` branch uses `edges.top.y`).
+   - Decide per override whether the live-edge point is actually better. For each one that still matters, apply it against the edge point (e.g. `hx = pg.x + edges.right.x` then nudge by the override), not the bbox. For any override the edge point genuinely makes redundant, **delete the dead key** from `ANATOMY_ANCHOR_OVERRIDES` (don't leave config that does nothing) and note it in the learnings.
+   - DoD: on serif presets, `f`/`t`/`J` height handles and `f`'s width handle sit where intended; `ANATOMY_ANCHOR_OVERRIDES` contains no keys that the code ignores.
+
+4. **(#4 — medium-low) Serif-foot edge point must be robust to weight/baseline shifts.** `_deformedEdgePoints` picks the foot as the rightmost sample within `±spanY*0.12` of glyph-local `y=0` (~6996), assuming the outline baseline is exactly 0 — but weight dilation pushes feet below `y=0` by `weight/2`, and Brief 3c already defined a baseline band as `±0.10·xHeight`.
+   - Reuse the single Brief 3c baseline tolerance (derive from `_bandMetrics.xHeight`) instead of a second independent `0.12·spanY` fraction, and make the foot search tolerant of feet sitting slightly below baseline after dilation (search near the actual minimum-y on the right, not strictly `|y|≤tol`).
+   - DoD: with `weight` and `serifLength` both engaged on a serif letter, the serif-foot handle stays on the foot terminal.
+
+5. **(#7 — low-med) `counterScale` growth cap must not let a diagonal counter breach the outline.** The cap (`COUNTER_STROKE_FLOOR_FRAC=0.06`, ~3700) only checks the four axis-aligned bbox extents of the counter vs the outer contour, so a counter widest on a diagonal (e.g. `a`/`e` bowl) can poke through between axes; it also ignores the live stroke thickness `weight` produces.
+   - Cap against the real minimum distance between the counter contour and the outer contour (sample-based is fine, reuse the dense-sampling already in the file), or at minimum factor the active `weight` into the floor. Keep the "ring never breaks" invariant across the full 0.6–1.4 range with `weight` also engaged.
+   - DoD: grow the counter to max on `a` and on a heavily-weighted glyph; the ring stays intact (screenshot).
+
+**Scope (do not):** don't change the deformation math itself (weight/height/width/serif/counter outputs), the preset data, or the bubbly engine. Don't alter `toState`/`fromState` shape. Don't refactor adjacent code for its own sake — Brief 10 covers cleanup.
+
+**Definition of done:** all five DoDs pass live; `node --check` + prettier clean; `toState/fromState` + export still round-trip; zero console errors beyond favicon. Append a Brief 9 entry to `docs/agent-learnings.md` (esp. the single-source-of-truth counter centroid and how `descenderDepth` was folded into edge sampling).
+
+**Verification:** Playwright MCP — Instrument Serif, type `gjpqy Bodega fft`; for each handle in #1–#4 drag it and assert (via `getBBox`/path-data deltas) the node's `cx`/`cy` moves in lockstep with the controlled edge, plus a screenshot per item; for #5 screenshot the grown counter on `a` at default and heavy weight.
+
+---
+
+## Brief 10 — Code-review cleanup: dedup, hot-path sampling, whitelist, dead code
+
+**Prerequisite:** Brief 9 landed (it changes `_deformedEdgePoints`, `counterScale`, and the counter-centroid flow — do Brief 10 after so the dedup targets are stable). Read `lib/sculpt.js`; navigate by function name. Finding numbers reference the Brief 7/8 review. These are quality-only changes — **no behavior change**; every item must leave the rendered output and handle positions byte-identical (verify with a before/after path-data + handle-position diff in Playwright).
+
+**Scope (do):**
+
+1. **(#6 — altitude) Replace the `ANATOMY_COUNTER_LETTERS` whitelist with the runtime detector.** The hand-curated 14-glyph list (~4016) duplicates knowledge `counterSubpathIndices`/`counterCentroid` already compute, and the counter anchor branch already self-drops the handle when the centroid is null (~7117). Wire `counterContour` onto any glyph for which `counterCentroid(baseCommands)` is non-null instead of the list (still gated to the three contrast/serif/sans presets + the mono/bubble opt-out, which stay preset-level). Remove the apologetic "B was dropped from the enumeration" comment. Confirm the same set of handles appears on the demo strings as before (it should, plus any genuinely-countered glyph the list omitted — call those out in the learnings).
+
+2. **(#8 — efficiency) Cut `_deformedEdgePoints`' per-frame sampling cost.** It runs `sampleSubpathDense(.,12)` over every subpath, then a separate bounds pass, then an extrema pass — three O(points) passes per cache-miss frame (the dragged glyph misses every frame of its own drag). Fold the bounds accumulation into the sampling loop (one pass), and consider lowering `samplesPerCurve` for the live cloud or sampling only the region the active extrema need. Must produce the same edge points (within rounding) as today.
+
+3. **(#9 — reuse) Collapse the duplicated counter-detection / bounds logic.** `counterSubpathIndices`, `counterCentroid`, and `counterScale` each independently walk every subpath computing `signedAreaOfCommands`; `counterScale` re-finds the outer contour that `counterSubpathIndices` already scanned; `anatomyWidth` copy-pastes the same counter gate the JSDoc claims it "uses." Extract one helper (e.g. `detectCounters(subs) → { outerIndex, counterIndices, centroid }`) computing split + per-subpath areas once, and have all callers use it. Also replace `_deformedEdgePoints`' inline min/max loop with `boundsFromCommands` where the deformed-bbox semantics match.
+
+4. **(#10 — simplification) Remove dead branches in `_computeHandlePositions` / `_deformedEdgePoints`.** `_deformedEdgePoints` returns null only for glyphs with no commands/empty cloud, which can't reach the positioning loop (filtered by `!g.pathData` / `!ids.length`), so the five `else { ...bbox... }` fallbacks are near-unreachable — either make `_deformedEdgePoints` itself return bbox-derived edges so callers never branch, or collapse the fallbacks to one helper. The `if (!bottom)` fallback (~7009) is fully dead (`bottom` is set for every point and the cloud is guaranteed non-empty) — drop it.
+
+**Scope (do not):** no behavior change — if any rendered path, handle position, tooltip, or exported state differs before/after, you've gone too far. Don't touch Brief 9's behavioral fixes. No new dependencies.
+
+**Definition of done:** `node --check` + prettier clean; a Playwright before/after comparison shows identical path data and handle `cx`/`cy` across all presets on `Hello jazz` + `Bodega`; zero console errors. Append a Brief 10 entry to `docs/agent-learnings.md` listing the shared helper(s) introduced and any glyph the detector now counters that the old whitelist missed.
+
+**Verification:** Playwright MCP — for each preset, snapshot all path `d` strings + every handle hit-circle `cx`/`cy` before (current HEAD) and after; assert deep-equal (modulo float rounding). Confirm counter-handle letter set on `Bodega`/`aximul`/`Hello jazz` matches Brief 7's DoD.
