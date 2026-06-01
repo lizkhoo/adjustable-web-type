@@ -391,3 +391,20 @@ Quality-only cleanup on top of Brief 9. **Zero behavior change**, proven by a be
 - **#10 — dead branches removed.** Dropped the fully-dead `if (!bottom)` fallback in `_deformedEdgePoints` (`bottom` is the global bottom-most, set for every point, and the cloud is guaranteed non-empty above). In `_computeHandlePositions`, collapsed the five per-anchor `else { …bbox… }` fallbacks into a single synthesized bbox-derived `edges` object built once when `_deformedEdgePoints` returns null (only reachable for a load-failure glyph that has `pathData` but no command cloud — real glyphs always sample), so each anchor branch is now unconditional.
 
 **Verification.** Snapshot deep-equal (above). Brief 7 counter sets re-confirmed post-refactor: sourceSans `aximul`→`a`, instrumentSerif `Bodega`→`Bodega`, bitter `Hello jazz`→`eoa`, instrumentSerif `Hello`→`eo`, ibmPlexMono `Bodega`→∅. New-detector `A`/`8` counter handles get finite coords. `node --check` + prettier clean; zero console errors beyond favicon.
+
+## `weight` switched from offset-path dilation to a stroke overlay — bold + bleed (2026-05-31, user feedback)
+
+**Feedback:** per-letter weight was "too subtle" and should be far more noticeable — bold enough that letters overlap and bleed into their neighbors.
+
+**Root cause:** `weight` rendered via `dilateOutline` (Brief 3a's polyline-sampled offset path). On the cursive Instrument Serif curves it self-intersects past ~weight 40 — the glyph shatters into white gashes (the same fragmentation noted in the Brief 9 entry). Raising its range only made the mush worse, never bolder. (This finally explains that fragmentation: dilation, not the counter, was always the culprit.)
+
+**Fix — render weight as a round-joined stroke overlay** (`paint-order: stroke fill`, `stroke-linejoin/linecap: round`) instead of geometry. A centered stroke of width W grows the silhouette by W/2 in every direction, cleanly, with no self-intersection — bold all the way up to a solid bleeding mass. `_resolveGlyphPath`'s weight branch now just sets `strokeAttrs` and keeps `cmds` as the (un-stroked) height/width/counter/serif outline; the `dilateOutline` call is gone (the function is kept but **unused** — see its docstring note). Range bumped **0..40 → 0..160** (drag `dx/2 → dx/1.5`; mouse-follow `weightMax 40 → 160`). At ~w50 it's a clean bold, ~w100 letters merge, ~w160 full bleed.
+
+**Knock-on changes the stroke needs (all keyed off `weight/2`):**
+
+- **viewBox padding.** The stroke halo overshoots the layout bbox by `weight/2` and `.stage svg` has no `overflow:visible`, so a bold halo would clip at the SVG edges. New `_maxWeightPad()` = `ceil(maxWeight/2)`; `_render` + `toSVG` give the viewBox a **negative origin** (`-wpad -wpad …`) and grow width/height by `2·wpad` — glyph coordinates (and handle positions) stay put, the viewport just shows more.
+- **descender clip.** `_glyphMarkup`'s per-glyph split clip rects gained `+weight/2` on `padX`/`padY` so a heavy `g`/`j`/`p`/`q`/`y` stroke isn't cut at the split.
+- **handle-node tracking.** `cmds` is now the un-stroked outline, so `_deformedEdgePoints` pushes each edge node out by `weight/2` (left −, right +, top −, bottom +, foot +) to keep the weight/left node on the visible thickened edge (Brief 8 B1 intent). Verified: at w=120 the left/right/top nodes each move exactly 60.
+- The Brief 9 #5 counter-cap `weight/2` reserve still holds — the stroke eats `weight/2` _into_ the counter just as the dilation did, so the ring invariant is unchanged.
+
+**Verified (Playwright, real render path):** `Hello` at w=0/50/100/160 + `jumpy` at w=120 — clean bold, neighbor bleed, descenders render unclipped, no fragmentation. Node tracking ±`weight/2` exact; `toState→fromState` byte-identical with weight set; `toSVG` viewBox `-60 -60 1640 929` at w=120; zero console errors. `node --check` + prettier clean.
