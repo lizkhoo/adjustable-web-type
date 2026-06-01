@@ -3,3 +3,6 @@ node_modules/
 # macOS Finder metadata
 .DS_Store
 **/.DS_Store
+
+# Playwright MCP run artifacts
+.playwright-mcp/
