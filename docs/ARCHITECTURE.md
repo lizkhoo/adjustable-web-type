@@ -1,53 +1,52 @@
 # Architecture
 
-A map for agents picking up this codebase. For terminology see [CONTEXT.md](../CONTEXT.md); for the rationale behind the major split see [adr/0001-per-preset-pipeline-routing.md](./adr/0001-per-preset-pipeline-routing.md).
+A map for agents picking up this codebase. For terminology see [CONTEXT.md](../CONTEXT.md); for the rationale behind the major split see [adr/0001-per-preset-pipeline-routing.md](./adr/0001-per-preset-pipeline-routing.md); for the public surface see [API.md](./API.md).
 
-> **Note (2026-05-27):** Path α was chosen as the production direction for the four anatomy-driven presets. The new engine class (`AnatomyDeformWordmark`) is not yet in `lib/sculpt.js` — the validated prototype lives in `adjustable-web-type.prototype.html`. The two-pipeline model below describes today's code; once `AnatomyDeformWordmark` lands, the legacy `Wordmark` class is renamed to **`SandboxWordmark`** and retained only as the engine for the `none` preset (a `Wordmark` alias is kept for backward compatibility). See [handoff-path-alpha.md](./handoff-path-alpha.md) and [docs/briefs/path-alpha-landing.md](./briefs/path-alpha-landing.md).
+> **Note (2026-06-01):** Path α has landed. The four anatomy-driven presets now route to `AnatomyDeformWordmark` in `lib/sculpt.js`; the throwaway prototype page has been retired (its gesture model is preserved in [handoff-path-alpha.md](./handoff-path-alpha.md)). The legacy hand-authored engine is now `SandboxWordmark` (a `Wordmark` alias is kept for backward compatibility) and serves only the `none` preset.
 
-## The two-pipeline model
+## The pipeline model
 
-The library renders a wordmark through one of two engines. The choice is per-preset (locked at preset-definition time, not user-toggled).
+The library renders a wordmark through one of three engines. The choice is per-preset (locked at preset-definition time via `preset.pipeline`, not user-toggled), except for the static-compare mode which is independent of pipeline.
 
 ```
                      createWordmark(text, opts)
                               │
-                  ┌───────────┴───────────┐
-                  │                       │
-         preset.pipeline =          preset.pipeline =
-          "outline-deform"          "anatomy-deform"
-                  │                       │
-   DeformableOutlineWordmark        AnatomyDeformWordmark
-   (lib/sculpt.js:2463)             (new — to land per Brief 1)
-                  │                       │
-        loads WOFF via                renders hand-authored
-        opentype.js;                  Béziers + monoline
-        deforms outline               glyphs; per-letter
-        with preset.axes              anatomy handles
-                  │                       │
-                  └───────────┬───────────┘
-                              ▼
-                     SVG mounted in DOM
+        ┌─────────────────────┼─────────────────────┐
+        │                     │                     │
+  renderMode =          preset.pipeline =     preset.pipeline =
+ "outline-static"      "outline-deform"       "anatomy-deform"
+        │                     │                     │
+  OutlineWordmark    DeformableOutlineWordmark  AnatomyDeformWordmark
+  (static, no         (WOFF + one global         (WOFF + per-letter
+   handles)            preset axis: bubbly)       anatomy handles)
+                                                        │
+        no preset / preset === "none"  ────────►  SandboxWordmark
+                                                  (hand-authored Béziers)
 ```
 
-A third class, `OutlineWordmark` (`lib/sculpt.js:2983`), renders a **static** filled WOFF outline with no handles. It powers the demo's "Reference outlines" toggle for side-by-side comparison and is not part of either primary pipeline.
+- `OutlineWordmark` powers the demo's "Reference outlines" toggle (filled WOFF, no handles) for side-by-side comparison. Reachable for any named preset via `renderMode: "outline-static"`.
+- `SandboxWordmark` is the fallback for the `none` preset (no reference font) — the hand-authored Bézier sandbox + monoline factory. A `Wordmark` export alias points at it so previously-generated `toInteractiveBundle()` HTML keeps working.
 
 ## File layout
 
 ```
 adjustable-web-type/
-├── adjustable-web-type.html       ← demo + dev docs page; UI wiring; mount()
-├── adjustable-web-type.prototype.html ← scratch (not for production; see handoff doc)
-├── lib/sculpt.js                  ← entire library, single UMD-ish file (~3.2k LOC)
+├── adjustable-web-type.html       ← demo + in-page dev docs page; UI wiring; mount()
+├── lib/sculpt.js                  ← entire library, single UMD-ish file (~8.2k LOC)
 ├── CONTEXT.md                     ← glossary
-├── CHANGES.md                     ← sprint log + deferred items
+├── CHANGES.md                     ← sprint/brief log + deferred items
+├── README.md                     ← library + demo overview; "where to read next"
 ├── docs/
 │   ├── ARCHITECTURE.md            ← this file
 │   ├── API.md                     ← public surface reference
 │   ├── PRODUCT_INTENT.md          ← toy, not a type-design tool
 │   ├── THIRD_PARTY_FONTS.md       ← OFL attribution; font-loading
 │   ├── snapshot-regression.md     ← manual visual-regression checklist
-│   ├── handoff-pipeline-prototype.md ← in-flight prototype handoff
+│   ├── handoff-path-alpha.md      ← path-α gesture model (superseded; kept for history)
+│   ├── handoff-pipeline-prototype.md ← earlier prototype handoff (superseded)
 │   ├── agent-learnings.md         ← chronological session journal (long)
+│   ├── briefs/
+│   │   └── path-alpha-landing.md  ← the work-order specs for Briefs 1–10
 │   └── adr/
 │       └── 0001-per-preset-pipeline-routing.md
 └── package.json                   ← Vite dev only; one runtime dep (opentype.js)
@@ -55,23 +54,24 @@ adjustable-web-type/
 
 ## Tour of `lib/sculpt.js`
 
-The single file is laid out top-to-bottom in dependency order. Major sections by line range:
+The single file is laid out top-to-bottom in dependency order. The file grows often, so **navigate by the named functions/classes below** — the line ranges are approximate.
 
-| Lines | Section | Notes |
-|---|---|---|
-| 30–45 | UMD wrapper, registry | Exposes `SculptLettering` global. `registerGlyph` populates the alphabet registry. |
-| 47–90 | `Glyph` instance | One per character in a wordmark. Holds module + tuned `params`. |
-| 90–290 | Geometry helpers | `bboxFromPaths`, `clampAperture`, `advanceWithBearings`, `appendSerifStubs`, `makeArchGlyph`. |
-| 285–1090 | Curated glyph modules | Hand-authored Bézier glyphs: `a`, `n`, `o`, `s`, `h`, `i`, `e`, `t`, `r`, `l`, `w`, `d`, `b`, `c`, `m`, `g`, space. Each exports `{character, defaultParams, paramRanges, construct, handles, advance, bounds}`. |
-| 1093–1241 | Monoline factory | `createMonolineGlyph()` builds the remaining ~30 letters from normalized polyline definitions + Catmull-Rom curvature. Fallback alphabet. |
-| 1265–1300 | Outline runtime helpers | `setOpentypeParser`, `outlineAttributionBlock/Html`, disclaimer constants. |
-| 1309–1610 | Outline deformation core | Command cloning, dense subpath sampling, `applyBubbliness`, `applyWidthScale`, `buildSerifExtras`, `applyPresetAxesToCommands`, `buildDeformedPathData`, `extractOutlineGlyph`, font cache. |
-| 1612–1845 | Preset definitions | The five presets (`bubbly`, `instrumentSerif`, `sourceSans`, `bitter`, `ibmPlexMono`) + their `defaults`, `glyphParams`, `axes`. |
-| 1846–1870 | Preset registry + `resolvePresetParams` | Merges `defaults` then overlays `glyphParams[ch]` per key. |
-| 1872–2460 | `class Wordmark` (to be renamed `SandboxWordmark` per Brief 1) | **Hand-authored Bézier sandbox.** After path α lands, this serves only the `none` preset. Layout, render, drag, mouse-follow, `setText`, `setPreset`, `toSVG`, `toState`, `toInteractiveBundle`. |
-| 2463–2980 | `class DeformableOutlineWordmark` | **Outline-deform pipeline.** Loads WOFF, builds deformed path data per axis change, exposes right-side axis handle, supports mouse-follow mapped to primary axis. |
-| 2983–3200 | `class OutlineWordmark` | **Static comparison only.** Filled WOFF paths, no handles. |
-| 3210–3237 | `createWordmark()` router + final exports | Dispatches to the right class based on `options.mode` / `presetKey`. Registers glyphs. Returns the public surface. |
+| ~Lines    | Section                                            | Notes                                                                                                                                                                                                                                                                                           |
+| --------- | -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 30–115    | UMD wrapper, registry, `Glyph`                     | Exposes `SculptLettering` global. `registerGlyph` populates the alphabet registry; `Glyph` is one instance per character.                                                                                                                                                                       |
+| 117–2140  | Curated glyph modules + geometry helpers           | Hand-authored Bézier glyphs (`a`, `n`, `o`, `s`, `h`, `i`, `e`, `t`, `r`, `l`, `w`, `d`, `b`, `c`, `m`, `g`, space) + helpers (`bboxFromPaths`, `clampAperture`, `advanceWithBearings`, …). Each module exports `{character, defaultParams, paramRanges, construct, handles, advance, bounds}`. |
+| 2148–2700 | Uppercase + extra-lowercase polyline defs          | `UPPERCASE_DEFS` (2148), `EXTRA_LOWERCASE_DEFS` (2557) — normalized polylines for the monoline factory.                                                                                                                                                                                         |
+| 2708–2940 | Monoline factory                                   | `createMonolineGlyph()` builds the remaining ~30 letters from polyline defs + Catmull-Rom curvature. Fallback alphabet. `curatedGlyphParams()` helper at 2939.                                                                                                                                  |
+| 2948–3290 | Outline runtime helpers                            | `setOpentypeParser`, attribution/disclaimer constants, `_fontCache`, `outlineAttributionBlock`.                                                                                                                                                                                                 |
+| 3300–3915 | Outline deformation core                           | `applyBubbliness` (3300), dense subpath sampling, serif extras, preset-axis application.                                                                                                                                                                                                        |
+| 3919–4100 | `buildDeformedPathData`                            | Builds deformed path data per axis change (the outline-deform workhorse; also reused by anatomy-deform path resolution).                                                                                                                                                                        |
+| 4108–4880 | Preset definitions                                 | The five presets (`bubbly` 4108, `instrumentSerif` 4265, `sourceSans` 4423, `bitter` 4572, `ibmPlexMono` 4731) + their `pipeline`, `handles`/`axes`, `defaults`, `glyphParams`.                                                                                                                 |
+| 4882–4912 | Preset registry + `resolvePresetParams`            | `presets` const (4882); `resolvePresetParams` merges `defaults` then overlays `glyphParams[ch]`.                                                                                                                                                                                                |
+| 4913–5624 | `class SandboxWordmark` (alias `Wordmark`)         | Hand-authored Bézier sandbox. Serves only the `none` preset. Layout, render, drag, mouse-follow, `setText`/`setPreset`/`toSVG`/`toState`/`toInteractiveBundle`.                                                                                                                                 |
+| 5625–6391 | `class DeformableOutlineWordmark`                  | Outline-deform pipeline (`bubbly`). Loads WOFF, builds deformed path data per axis change, right-side axis handle, mouse-follow → primary axis. `setAxis`, static `fromState`.                                                                                                                  |
+| 6392–7835 | `class AnatomyDeformWordmark`                      | Anatomy-deform pipeline (the four readable-text faces). WOFF outline + per-letter anatomy handles (`height`/`width`/`serifLength`/`weight`/`descenderDepth`/`counterContour`); per-glyph deformations baked into the outline commands; mono-cell toggle; static `fromState`.                    |
+| 7836–8081 | `class OutlineWordmark`                            | Static comparison only. Filled WOFF paths, no handles.                                                                                                                                                                                                                                          |
+| 8082–end  | `createWordmark()` router + registration + exports | Dispatches on `renderMode` / `preset.pipeline`. Registers glyphs. Returns the public surface (see API.md).                                                                                                                                                                                      |
 
 ## How the demo wires it together
 
@@ -79,17 +79,18 @@ The single file is laid out top-to-bottom in dependency order. Major sections by
 
 1. Loads `lib/sculpt.js` and `opentype.js` (CDN, for outline parsing).
 2. Custom combobox (preset picker) — hidden `<select>` for accessibility + a styled `<button>`/`<ul>` for the visible UI. Each option renders in its preset's `fontRef` web font.
-3. `mount()` — given current text + preset + mode toggles, instantiates the right Wordmark class and replaces `#stage` SVG. Always tears down mouse-follow on the previous instance to avoid orphaned `window` listeners.
-4. Toggle controls — "Reference outlines" (static compare), "Mouse follow", "Monoline curvature" (parametric only).
+3. `mount()` — given current text + preset + mode toggles, calls `createWordmark()` and replaces `#stage` SVG. Always tears down mouse-follow on the previous instance to avoid orphaned `window` listeners.
+4. Toggle controls — "Reference outlines" (static compare), "Mouse follow", and the `ibmPlexMono`-only "mono cell" toggle.
 5. Reset, hex color input, Export code (downloads `toInteractiveBundle()` HTML).
 
 ## When you change something, where the change lives
 
-| Goal | File / region |
-|---|---|
-| Tune a preset's mood | `lib/sculpt.js:1612-1845` — edit `defaults` / `glyphParams` / `axes` |
-| Add a per-letter handle | The relevant glyph module in `lib/sculpt.js:285-1090` — add to `handles()`, `defaultParams`, `paramRanges` |
-| Add a new preset axis (outline-deform) | `applyPresetAxesToCommands` (`lib/sculpt.js:1581`) + the preset's `axes:` block |
-| Change which pipeline a preset uses | The preset object + the routing logic in `createWordmark()` (`lib/sculpt.js` near the bottom). See ADR 0001. |
-| Wire a new demo control | `adjustable-web-type.html` inline script + `mount()` |
-| Add a new glyph | Register in `lib/sculpt.js` near the curated section; export `bounds()` (required since Sprint 2 fix #1) |
+| Goal                                          | File / region                                                                                  |
+| --------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| Tune a preset's mood                          | `lib/sculpt.js` preset definitions (~4108–4880) — edit `defaults` / `glyphParams` / `axes`     |
+| Change a preset's handle vocabulary           | The preset's `handles:` array (anatomy-deform) or `axes:` block (outline-deform)               |
+| Add/adjust per-letter anatomy-handle math     | `AnatomyDeformWordmark` (~6392) — `_resolveGlyphPath` and the band/region helpers              |
+| Add a new preset axis (outline-deform)        | `applyPresetAxesToCommands` / `buildDeformedPathData` + the preset's `axes:` block             |
+| Change which pipeline a preset uses           | The preset object's `pipeline` field + the router in `createWordmark()` (~8082). See ADR 0001. |
+| Wire a new demo control                       | `adjustable-web-type.html` inline script + `mount()`                                           |
+| Add a new hand-authored glyph (`none` preset) | Register near the curated section; export `bounds()` (required since Sprint 2)                 |

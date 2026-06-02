@@ -408,3 +408,20 @@ Quality-only cleanup on top of Brief 9. **Zero behavior change**, proven by a be
 - The Brief 9 #5 counter-cap `weight/2` reserve still holds — the stroke eats `weight/2` _into_ the counter just as the dilation did, so the ring invariant is unchanged.
 
 **Verified (Playwright, real render path):** `Hello` at w=0/50/100/160 + `jumpy` at w=120 — clean bold, neighbor bleed, descenders render unclipped, no fragmentation. Node tracking ±`weight/2` exact; `toState→fromState` byte-identical with weight set; `toSVG` viewBox `-60 -60 1640 929` at w=120; zero console errors. `node --check` + prettier clean.
+
+## Brief 4 landed — cleanup and doc alignment (2026-06-01)
+
+The doc-only closeout of the path-α landing. No `lib/sculpt.js` behavior change (one comment edit). Brought the canonical docs into line with the shipped code now that Briefs 1–3, 7–10 (and the weight-stroke rework) are all committed.
+
+**What shipped:**
+
+- **Retired the prototype.** Deleted `adjustable-web-type.prototype.html` (gesture model preserved in `handoff-path-alpha.md`) and scrubbed live references to it across `CONTEXT.md`, `docs/ARCHITECTURE.md`, `docs/adr/0001`, the two handoff docs, and the one `lib/sculpt.js` comment. The historical work-order `docs/briefs/path-alpha-landing.md` keeps its references — it's the spec that ordered the deletion, not a live pointer.
+- **Marked both handoffs superseded.** `handoff-pipeline-prototype.md` → superseded by ADR 0001 + `handoff-path-alpha.md`; `handoff-path-alpha.md` → superseded/shipped, canonical record is ADR 0001 + the new API doc. Both kept for history.
+- **Wrote `docs/API.md`** — the public surface: `setOpentypeParser`, the `createWordmark` router (dispatch table by `renderMode` / `preset.pipeline`), the four engine classes (`SandboxWordmark`/alias `Wordmark`, `DeformableOutlineWordmark`, `AnatomyDeformWordmark`, `OutlineWordmark`) with their per-class methods, the preset shape, and the three `toState` discriminator shapes. Documents the actual option names (`presetKey`, `renderMode`) and that each engine carries its own static `fromState` (no central one).
+- **Refreshed `README.md`** — first paragraph now reads "library + demo/configurator/exporter site"; "Where to read next" links `API.md`, drops the "provisional ADR / in-flight prototype" framing, and corrects the LOC (~3.2k → ~8.2k).
+- **Refreshed `PRODUCT_INTENT.md`** — replaced the stale "deformable outline as default for font presets" framing with per-preset pipeline routing (anatomy-deform is the default for the four readable faces; outline-deform for bubbly), cross-linked to ADR 0001.
+- **Refreshed `ARCHITECTURE.md`** — removed the "AnatomyDeformWordmark not yet landed" note, redrew the pipeline diagram (now four engines incl. the static-compare and sandbox paths), corrected all class line anchors, and replaced the stale section table with name-navigable ranges + a "line numbers drift" caveat.
+
+**Still deferred (carried forward, not regressions):** production-grade math refinements beyond what Briefs 3/7–10 shipped; the offset-path `dilateOutline` is retained but unused (weight is now a stroke overlay); LCS `setText` and snapshot tests from the original Sprint-2 deferred list.
+
+**Out of scope (left intact per the brief):** the chronological journal entries above (append-only), `docs/snapshot-regression.md`, and the `OutlineWordmark` / `SandboxWordmark` engines.

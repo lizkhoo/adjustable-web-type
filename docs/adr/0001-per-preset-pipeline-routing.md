@@ -6,7 +6,7 @@
 
 ## Context
 
-The library has two rendering engines today (`Wordmark` for parametric hand-authored Bézier glyphs — to be renamed `SandboxWordmark` per Brief 1 — and `DeformableOutlineWordmark` for WOFF + a single global axis). A third — the **path α engine, `AnatomyDeformWordmark`** — has been validated in `adjustable-web-type.prototype.html` and is the chosen production target (see [handoff-path-alpha.md](../handoff-path-alpha.md) and [docs/briefs/path-alpha-landing.md](../briefs/path-alpha-landing.md)).
+The library has two rendering engines today (`Wordmark` for parametric hand-authored Bézier glyphs — to be renamed `SandboxWordmark` per Brief 1 — and `DeformableOutlineWordmark` for WOFF + a single global axis). A third — the **path α engine, `AnatomyDeformWordmark`** — was validated in a throwaway prototype page (since retired) and is the chosen production target. It has since shipped in `lib/sculpt.js` (see [handoff-path-alpha.md](../handoff-path-alpha.md) and [docs/briefs/path-alpha-landing.md](../briefs/path-alpha-landing.md)).
 
 Until this ADR, the demo wired **every named font preset** to `DeformableOutlineWordmark`. Per-letter anatomy handles were only reachable via the `none` preset's `Wordmark` engine, AND that hand-authored output didn't visually match the named font — the hand-authored alphabet is not derived from any WOFF. The "scrubbed" sensation from the owner came from picking Instrument Serif and getting either (a) the WOFF with only a global slider, or (b) — via `none` — a generic monoline-with-serifs that didn't read as Instrument Serif.
 
@@ -26,13 +26,13 @@ A preset is "shape-novelty" when the outline itself is the joke (display faces l
 
 Initial classification of the five presets:
 
-| Preset key | Pipeline |
-|---|---|
-| `bubbly` | outline-deform |
-| `instrumentSerif` | parametric |
-| `bitter` | parametric |
-| `sourceSans` | parametric |
-| `ibmPlexMono` | parametric |
+| Preset key        | Pipeline       |
+| ----------------- | -------------- |
+| `bubbly`          | outline-deform |
+| `instrumentSerif` | parametric     |
+| `bitter`          | parametric     |
+| `sourceSans`      | parametric     |
+| `ibmPlexMono`     | parametric     |
 
 Additionally:
 
@@ -42,18 +42,20 @@ Additionally:
 ## Consequences
 
 **Positive.**
+
 - The user gets the right vocabulary for the mood. Bubbliness on a real outline; anatomy handles on a parametric serif.
 - The two pipelines stay simple internally — neither has to learn the other's handle model.
 - Adding a sixth preset is a one-line classification decision against the rule above.
 
 **Negative.**
+
 - Two distinct interaction models the user has to learn. Mitigated by the fact that most presets (four of five) sit in parametric, so the parametric model is the default experience.
 - Calibration burden: parametric presets need their `defaults` + `glyphParams` tuned so the output reads as the named font. This is the work tracked by [handoff-pipeline-prototype.md](../handoff-pipeline-prototype.md).
 - The "Mouse follow" affordance behaves differently per pipeline (axis-mapped in outline-deform; tangent-only handle dragging in parametric). The pipelines diverging is intentional but cross-pipeline UX consistency requires conscious design.
 
 ## Alternatives considered
 
-**A. All presets route to outline-deform.** *(Previous state.)* Rejected because per-letter anatomy handles were the original pedagogical hook of the toy and disappeared from the UI under this regime. The owner specifically called this out as the foundational issue.
+**A. All presets route to outline-deform.** _(Previous state.)_ Rejected because per-letter anatomy handles were the original pedagogical hook of the toy and disappeared from the UI under this regime. The owner specifically called this out as the foundational issue.
 
 **B. All presets route to parametric, with the WOFF loaded only for `OutlineWordmark` static compare.** Rejected because Rubik Bubbles doesn't have a meaningful parametric expression — its visual identity is in the outline shape, not its anatomy. Parametric Rubik Bubbles would be a different font in spirit.
 

@@ -1,22 +1,25 @@
+> **Superseded by [ADR 0001](adr/0001-per-preset-pipeline-routing.md) and [handoff-path-alpha.md](handoff-path-alpha.md)** — kept for history. The per-preset pipeline question this doc opened was resolved (path α won); the prototype page it points to has been retired.
+
 # Handoff — per-preset pipeline prototype
 
-**Status:** Draft. The grilling session that produced this is still in progress; bring findings back to that session before any production change to `lib/sculpt.js`.
+**Status:** Superseded. The grilling session that produced this resolved into ADR 0001; path α shipped as `AnatomyDeformWordmark`.
 
-**Prototype:** [`adjustable-web-type.prototype.html`](../adjustable-web-type.prototype.html) — run `npm run dev` and open `http://127.0.0.1:5173/adjustable-web-type.prototype.html`. The page mounts whichever pipeline each preset declares in its `PRESET_PIPELINES` map (top of the page's inline script). A **Pipeline override** segmented control lets you force the same preset through the other pipeline for direct comparison. The state panel under the toolbar shows declared vs. active pipeline and which controls each pipeline surfaces.
+**Prototype:** the throwaway `adjustable-web-type.prototype.html` page referenced below has been deleted; its gesture model is captured in [handoff-path-alpha.md](handoff-path-alpha.md). The original page mounted whichever pipeline each preset declared in its `PRESET_PIPELINES` map, with a **Pipeline override** segmented control for direct comparison.
 
 **Routing decisions from the grilling session (2026-05-26):**
 
-| Preset | Pipeline | Reason |
-|---|---|---|
-| `bubbly` | outline-deform | Shape-novelty mood; the joke *is* the outline. |
-| `instrumentSerif` | parametric | Anatomy-driven; serif/x-height/bowl handles are the point. |
-| `bitter` | parametric | Anatomy-driven (slab terminals = serif anatomy). Use parametric `serifLength` per glyph + `strokeJoin: miter`. |
-| `sourceSans` | parametric | Anatomy-driven; per-letter `archWidth`/`bowlWidth`/`xHeight` handles beat a single global `width` axis. |
-| `ibmPlexMono` | parametric | Anatomy-driven; `monoCell` constraint + per-glyph proportions are the interesting tunables. |
+| Preset            | Pipeline       | Reason                                                                                                         |
+| ----------------- | -------------- | -------------------------------------------------------------------------------------------------------------- |
+| `bubbly`          | outline-deform | Shape-novelty mood; the joke _is_ the outline.                                                                 |
+| `instrumentSerif` | parametric     | Anatomy-driven; serif/x-height/bowl handles are the point.                                                     |
+| `bitter`          | parametric     | Anatomy-driven (slab terminals = serif anatomy). Use parametric `serifLength` per glyph + `strokeJoin: miter`. |
+| `sourceSans`      | parametric     | Anatomy-driven; per-letter `archWidth`/`bowlWidth`/`xHeight` handles beat a single global `width` axis.        |
+| `ibmPlexMono`     | parametric     | Anatomy-driven; `monoCell` constraint + per-glyph proportions are the interesting tunables.                    |
 
 **Classification rule for future presets:** shape-novelty presets are outline-deform; everything in the readable-text-face family is parametric.
 
 **Handle vocabulary decision (locked):** the two pipelines deliberately diverge.
+
 - outline-deform shows **preset axes only** (global slider + right-side axis handle).
 - parametric shows **per-letter anatomy handles only** — no global "preset axis" slider equivalent. If a wordmark-level tuning gesture is wanted later it's a separate design question, not part of this prototype.
 
@@ -25,7 +28,7 @@
 1. Does the parametric Instrument Serif read as Instrument Serif when handles render against the existing `defaults` + `glyphParams`? If not, what calibration gaps stand out?
 2. Same for Bitter (slab terminals via `serifLength` glyph params + miter joins).
 3. Same for Source Sans and IBM Plex Mono. For mono, confirm the `monoCell: 92` + `monoAdjustedAdvance()` layout still works through parametric `Wordmark`.
-4. Are there anatomy handles that *should* exist on serif/sans/mono glyphs but don't (e.g. `contrast`, `terminalAngle`, `slabWidth`)? List them — don't add them yet.
+4. Are there anatomy handles that _should_ exist on serif/sans/mono glyphs but don't (e.g. `contrast`, `terminalAngle`, `slabWidth`)? List them — don't add them yet.
 
 **Finding from the prototype (2026-05-26) — bring to the grilling session:**
 
@@ -37,11 +40,11 @@ That pipeline does not exist yet. It is not just a re-tune of the existing `Word
 
 **Open architectural questions to resolve:**
 
-1. Does the parametric pipeline get rebuilt on top of WOFF outlines (new engine), or do we go the other direction and calibrate the hand-authored glyph registry per-preset so it *visually* matches the WOFF?
+1. Does the parametric pipeline get rebuilt on top of WOFF outlines (new engine), or do we go the other direction and calibrate the hand-authored glyph registry per-preset so it _visually_ matches the WOFF?
 2. If new engine: what's the handle vocabulary, and how does each handle map to a deformation of the WOFF outline?
 3. What does the hand-authored Bezier registry become? Pure fallback for `none`-style "no reference font"? Or deleted?
 
-**Owner's decision (2026-05-26):** can't answer in the abstract. Need to *see* both candidate paths on the problematic presets (`instrumentSerif`, `bitter`, `sourceSans`, `ibmPlexMono`) before committing. Build both prototypes below, then bring them back to the grilling session for the call.
+**Owner's decision (2026-05-26):** can't answer in the abstract. Need to _see_ both candidate paths on the problematic presets (`instrumentSerif`, `bitter`, `sourceSans`, `ibmPlexMono`) before committing. Build both prototypes below, then bring them back to the grilling session for the call.
 
 ---
 
@@ -51,18 +54,19 @@ Both prototypes should live under `adjustable-web-type.prototype.html` (or branc
 
 ### Path γ — extended outline-deform (cheaper)
 
-Stay in `DeformableOutlineWordmark`. Add anatomy-aware axes for each of the four parametric presets so the user has *multiple* global sliders per preset, not one.
+Stay in `DeformableOutlineWordmark`. Add anatomy-aware axes for each of the four parametric presets so the user has _multiple_ global sliders per preset, not one.
 
 Target axis set per preset:
 
-| Preset | Axes to expose |
-|---|---|
-| `instrumentSerif` | `serifLength` (exists), `xHeight`, `weight`, `width` |
-| `bitter` | `serifLength` (exists, miter), `xHeight`, `weight`, `width` |
-| `sourceSans` | `width` (exists), `xHeight`, `weight` |
-| `ibmPlexMono` | `width` (exists), `xHeight`, `weight` |
+| Preset            | Axes to expose                                              |
+| ----------------- | ----------------------------------------------------------- |
+| `instrumentSerif` | `serifLength` (exists), `xHeight`, `weight`, `width`        |
+| `bitter`          | `serifLength` (exists, miter), `xHeight`, `weight`, `width` |
+| `sourceSans`      | `width` (exists), `xHeight`, `weight`                       |
+| `ibmPlexMono`     | `width` (exists), `xHeight`, `weight`                       |
 
 What each axis means as a deformation of the WOFF:
+
 - `xHeight` — vertical scale of the portion of each glyph's outline below cap-height (or below ascender baseline for ascenders). Anchors at baseline; cap-height stays fixed.
 - `weight` — outline dilation (offset path) by `t * k` units along the local normal. Approximate; doesn't honor stem-contrast.
 - `width` — already implemented (horizontal scale from glyph left).
@@ -78,17 +82,17 @@ A new engine that loads the WOFF AND exposes per-letter drag handles bound to an
 - Letters: `a`, `o`, `l` (covers bowl + x-height + serif/ascender).
 - Anchors per letter (authored by hand into the prototype, not detected):
 
-| Letter | Anchor | Handle binds to |
-|---|---|---|
-| `a` | top of x-height curve | `xHeight` — scale outline below this point |
-| `a` | rightmost bowl point | `bowlWidth` — scale outline horizontally from stem |
-| `a` | baseline serif endpoint | `serifLength` — translate endpoint along baseline |
-| `o` | top of bowl | `xHeight` |
-| `o` | rightmost bowl point | `bowlWidth` |
-| `l` | top of ascender | `ascenderHeight` |
-| `l` | baseline serif endpoint | `serifLength` |
+| Letter | Anchor                  | Handle binds to                                    |
+| ------ | ----------------------- | -------------------------------------------------- |
+| `a`    | top of x-height curve   | `xHeight` — scale outline below this point         |
+| `a`    | rightmost bowl point    | `bowlWidth` — scale outline horizontally from stem |
+| `a`    | baseline serif endpoint | `serifLength` — translate endpoint along baseline  |
+| `o`    | top of bowl             | `xHeight`                                          |
+| `o`    | rightmost bowl point    | `bowlWidth`                                        |
+| `l`    | top of ascender         | `ascenderHeight`                                   |
+| `l`    | baseline serif endpoint | `serifLength`                                      |
 
-Other letters in the wordmark fall back to undeformed WOFF. This is enough to show what α *feels* like without committing to author 26+ anchor maps.
+Other letters in the wordmark fall back to undeformed WOFF. This is enough to show what α _feels_ like without committing to author 26+ anchor maps.
 
 What the user sees: real Instrument Serif outline. Dragging the `a`'s x-height handle squishes the actual `a` they're looking at. Other letters in the wordmark sit there undeformed.
 
@@ -101,15 +105,14 @@ What the user sees: real Instrument Serif outline. Dragging the `a`'s x-height h
 3. An estimate of α's full build cost (per-preset × per-letter anchor authoring, plus the outline-deformation primitives) so we can weigh it against γ's "good enough" answer.
 4. Resume the grilling session with concrete A/B material in hand. Do not merge prototype branches to main.
 
-
 ## The decision driving this prototype
 
 Picking a font preset (one of `bubbly`, `instrumentSerif`, `sourceSans`, `bitter`, `ibmPlexMono`) should route to **one of two rendering pipelines** based on the preset's character — not a single pipeline applied to all five.
 
-| Pipeline | Engine | What the user sees | Handles |
-|---|---|---|---|
-| **outline-deform** | `DeformableOutlineWordmark` (lib/sculpt.js:2463) | The real WOFF outline, deformed by one preset-level axis | Preset axis only (e.g. `bubbliness`) |
-| **parametric** | `Wordmark` (lib/sculpt.js:1872) | Hand-authored Bézier glyphs tuned to the font's mood | Per-letter anatomy handles (xHeight, bowlWidth, serifLength, etc.) |
+| Pipeline           | Engine                                           | What the user sees                                       | Handles                                                            |
+| ------------------ | ------------------------------------------------ | -------------------------------------------------------- | ------------------------------------------------------------------ |
+| **outline-deform** | `DeformableOutlineWordmark` (lib/sculpt.js:2463) | The real WOFF outline, deformed by one preset-level axis | Preset axis only (e.g. `bubbliness`)                               |
+| **parametric**     | `Wordmark` (lib/sculpt.js:1872)                  | Hand-authored Bézier glyphs tuned to the font's mood     | Per-letter anatomy handles (xHeight, bowlWidth, serifLength, etc.) |
 
 Today both engines exist, but **all five font presets route to outline-deform**, with parametric hidden behind the `none` preset. The user's intent is that **each preset declares its own pipeline**. The library should respect that declaration when mounting.
 
@@ -128,16 +131,17 @@ The "scrubbed" sensation is the cumulative effect of step 4: anatomy handles sti
 
 ## What to prototype in the other session
 
-Build a **light, throwaway prototype** that demonstrates the per-preset routing — *don't* refactor `lib/sculpt.js` yet. Suggested scope:
+Build a **light, throwaway prototype** that demonstrates the per-preset routing — _don't_ refactor `lib/sculpt.js` yet. Suggested scope:
 
 1. A copy of `adjustable-web-type.html` (e.g. `adjustable-web-type.prototype.html`) where the preset picker mounts:
    - `DeformableOutlineWordmark` for `bubbly`
    - Parametric `Wordmark` (with `instrumentSerif`'s existing `defaults` + `glyphParams`) for `instrumentSerif`
 2. Verify the parametric `Wordmark` path actually shows the Instrument Serif mood with anatomy handles — i.e. x-height handle on `a`, bowl width handle on `o`, serif length handle on letters that declare it (`a`, `e`, `l`, `b`, `c`, `m`, `g`).
-3. Note any anatomy handle that *should* exist for serif fonts but doesn't (e.g. is there a `width` handle per letter? a `contrast` axis? a `terminal` handle?).
+3. Note any anatomy handle that _should_ exist for serif fonts but doesn't (e.g. is there a `width` handle per letter? a `contrast` axis? a `terminal` handle?).
 4. Try the other three presets (`bitter`, `sourceSans`, `ibmPlexMono`) on **both** pipelines and form an opinion about which fits each.
 
 What to bring back to the grilling session:
+
 - Which pipeline each of the three undecided presets should use, and why
 - Per-letter anatomy controls that feel missing for serif/sans/mono moods (calibration gaps)
 - Whether the `defaults` block on each preset still feels right or needs re-tuning when the user actually sees parametric output
