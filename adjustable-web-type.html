@@ -756,6 +756,14 @@
               placeholder="Letters and spaces only"
             />
             <button
+              id="surprise"
+              class="btn ghost"
+              type="button"
+              title="Scatter the letters to a delightful random state"
+            >
+              Surprise
+            </button>
+            <button
               id="reset"
               class="btn ghost"
               type="button"
@@ -2241,6 +2249,17 @@ wm.setAxis('bubbliness', 0.6);</code></pre>
                 : "Letters reset to defaults"
             );
           }
+        });
+
+        // Surprise: log-scatter every handle/axis to a delightful random state.
+        // Works across all three engines (each exposes randomize()); in outline
+        // mode the axis sliders are re-synced to the new values.
+        const surprise = document.getElementById("surprise");
+        surprise.addEventListener("click", () => {
+          if (!wm || !wm.randomize) return;
+          wm.randomize();
+          if (isOutlineDeformMode()) syncAxisControls();
+          flash("Surprise!");
         });
 
         // ─── Export modal ─────────────────────────────────────────────
