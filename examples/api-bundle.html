@@ -58,7 +58,18 @@
       };
     </script>
     <script>
-      const src = document.getElementById("example").textContent.trim();
+      // Mirror the example source into the panel (dedented so Prettier's
+      // indentation of the text/plain block doesn't leak into the display),
+      // then run it (async wrapper so top-level await works).
+      const raw = document
+        .getElementById("example")
+        .textContent.replace(/^\n+/, "")
+        .replace(/\s+$/, "");
+      const lines = raw.split("\n");
+      const pad = Math.min(
+        ...lines.filter((l) => l.trim()).map((l) => l.match(/^ */)[0].length)
+      );
+      const src = lines.map((l) => l.slice(pad)).join("\n");
       document.getElementById("code").textContent = src;
       new Function("return (async () => {\n" + src + "\n})()")().catch(
         console.error
