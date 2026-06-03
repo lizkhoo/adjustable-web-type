@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>toState() · Adjustable Web Type example</title>
+    <link rel="stylesheet" href="example.css" />
+  </head>
+  <body>
+    <main class="wrap">
+      <a class="backlink" href="../adjustable-web-type.html"
+        >&larr; Adjustable Web Type</a
+      >
+      <h1><code>toState()</code> &rarr; <code>object</code></h1>
+      <p class="lede">
+        A JSON-safe, serializable snapshot &mdash;
+        <code>{ text, tracking, color, padding, preset, glyphs, modes }</code>.
+        The <code>preset</code> key lets exported bundles re-instantiate new
+        letters from the same mood. Tune the letters, then snapshot the state.
+      </p>
+
+      <div id="stage" class="stage"></div>
+      <div class="controls">
+        <button id="snapshot">toState()</button>
+      </div>
+      <div id="out" class="out" hidden></div>
+
+      <h2>Code</h2>
+      <pre class="code"><code id="code"></code></pre>
+    </main>
+
+    <script src="../lib/sculpt.js"></script>
+    <script id="example" type="text/plain">
+      const wm = await SculptLettering.createWordmark("hello jazz", { preset: "none" });
+      wm.mount("#stage");
+      wm.makeInteractive();
+
+      document.getElementById("snapshot").onclick = () => {
+        const state = wm.toState(); // JSON-safe snapshot
+        const out = document.getElementById("out");
+        out.hidden = false;
+        out.textContent = JSON.stringify(state, null, 2);
+      };
+    </script>
+    <script>
+      // Mirror the example source into the panel (dedented so Prettier's
+      // indentation of the text/plain block doesn't leak into the display),
+      // then run it (async wrapper so top-level await works).
+      const raw = document
+        .getElementById("example")
+        .textContent.replace(/^\n+/, "")
+        .replace(/\s+$/, "");
+      const lines = raw.split("\n");
+      const pad = Math.min(
+        ...lines.filter((l) => l.trim()).map((l) => l.match(/^ */)[0].length)
+      );
+      const src = lines.map((l) => l.slice(pad)).join("\n");
+      document.getElementById("code").textContent = src;
+      new Function("return (async () => {\n" + src + "\n})()")().catch(
+        console.error
+      );
+    </script>
+  </body>
+</html>

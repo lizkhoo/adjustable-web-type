@@ -690,6 +690,50 @@
           width: 60px;
         }
       }
+      .colophon {
+        padding: 28px 18px 56px;
+        text-align: center;
+        font-family: var(--sans);
+        font-size: 12px;
+        line-height: 1.5;
+        color: var(--muted);
+        border-top: 1px solid var(--rule);
+      }
+      .colophon a {
+        color: inherit;
+        text-decoration: underline;
+        text-underline-offset: 2px;
+      }
+      .colophon a:hover {
+        color: var(--ink);
+      }
+      /* Spoon link beside each Wordmark-API title → a live example page. */
+      .patch h4 .example-link {
+        display: inline-flex;
+        align-items: center;
+        margin-left: 8px;
+        vertical-align: middle;
+        color: var(--grey-600);
+        transition:
+          color 120ms ease,
+          transform 120ms ease;
+      }
+      .patch h4 .example-link:hover {
+        color: #2a2ae5;
+        transform: rotate(-14deg);
+      }
+      .patch h4 .example-link:focus-visible {
+        outline: 2px solid #2a2ae5;
+        outline-offset: 3px;
+        border-radius: 3px;
+      }
+      .spoon {
+        width: 15px;
+        height: 15px;
+        display: block;
+        fill: currentColor;
+        stroke: none;
+      }
     </style>
   </head>
   <body>
@@ -711,6 +755,14 @@
               autocomplete="off"
               placeholder="Letters and spaces only"
             />
+            <button
+              id="surprise"
+              class="btn ghost"
+              type="button"
+              title="Scatter the letters to a delightful random state"
+            >
+              Surprise
+            </button>
             <button
               id="reset"
               class="btn ghost"
@@ -1025,10 +1077,37 @@ wm.makeInteractive();                         // draggable handles + tooltip</co
 
       <div class="sprint">
         <h3>Wordmark API</h3>
+        <!-- Spoon icon (sculpting tool) — links each API to a live example page. -->
+        <svg
+          width="0"
+          height="0"
+          aria-hidden="true"
+          focusable="false"
+          style="position: absolute"
+        >
+          <symbol id="icon-spoon" viewBox="0 0 24 24">
+            <g transform="rotate(-38 12 12)">
+              <ellipse cx="12" cy="6.4" rx="3.8" ry="5" />
+              <rect x="10.7" y="9.8" width="2.6" height="11" rx="1.3" />
+            </g>
+          </symbol>
+        </svg>
         <div class="patches no-num">
           <div class="patch">
             <div>
-              <h4><code>setText(newText)</code></h4>
+              <h4>
+                <code>setText(newText)</code
+                ><a
+                  class="example-link"
+                  href="examples/api-settext.html"
+                  target="_blank"
+                  rel="noopener"
+                  title="Open a live example"
+                  aria-label="Live example for setText"
+                  ><svg class="spoon" viewBox="0 0 24 24" aria-hidden="true">
+                    <use href="#icon-spoon" /></svg
+                ></a>
+              </h4>
               <p>
                 Position-matched diff. Glyphs at indices that still match the
                 old text keep their tuned params; the rest are re-instantiated
@@ -1040,8 +1119,17 @@ wm.makeInteractive();                         // draggable handles + tooltip</co
           <div class="patch">
             <div>
               <h4>
-                <code>makeInteractive()</code> /
-                <code>freezeInteraction()</code>
+                <code>makeInteractive()</code> / <code>freezeInteraction()</code
+                ><a
+                  class="example-link"
+                  href="examples/api-makeinteractive.html"
+                  target="_blank"
+                  rel="noopener"
+                  title="Open a live example"
+                  aria-label="Live example for makeInteractive"
+                  ><svg class="spoon" viewBox="0 0 24 24" aria-hidden="true">
+                    <use href="#icon-spoon" /></svg
+                ></a>
               </h4>
               <p>
                 Toggles handles + hover tooltip. Tooltip styling, edge-flip, and
@@ -1053,7 +1141,17 @@ wm.makeInteractive();                         // draggable handles + tooltip</co
             <div>
               <h4>
                 <code>enableMouseFollow(opts?)</code> /
-                <code>disableMouseFollow()</code>
+                <code>disableMouseFollow()</code
+                ><a
+                  class="example-link"
+                  href="examples/api-mousefollow.html"
+                  target="_blank"
+                  rel="noopener"
+                  title="Open a live example"
+                  aria-label="Live example for enableMouseFollow"
+                  ><svg class="spoon" viewBox="0 0 24 24" aria-hidden="true">
+                    <use href="#icon-spoon" /></svg
+                ></a>
               </h4>
               <p>
                 Maps the page mouse position into tangent-handle drag deltas so
@@ -1071,7 +1169,19 @@ wm.makeInteractive();                         // draggable handles + tooltip</co
           </div>
           <div class="patch">
             <div>
-              <h4><code>resetAll()</code> / <code>resetGlyph(index)</code></h4>
+              <h4>
+                <code>resetAll()</code> / <code>resetGlyph(index)</code
+                ><a
+                  class="example-link"
+                  href="examples/api-reset.html"
+                  target="_blank"
+                  rel="noopener"
+                  title="Open a live example"
+                  aria-label="Live example for resetAll and resetGlyph"
+                  ><svg class="spoon" viewBox="0 0 24 24" aria-hidden="true">
+                    <use href="#icon-spoon" /></svg
+                ></a>
+              </h4>
               <p>
                 Reverts each glyph to the active preset via
                 <code>resolvePresetParams</code> (or module defaults when preset
@@ -1081,7 +1191,19 @@ wm.makeInteractive();                         // draggable handles + tooltip</co
           </div>
           <div class="patch">
             <div>
-              <h4><code>toSVG()</code> → <code>string</code></h4>
+              <h4>
+                <code>toSVG()</code> → <code>string</code
+                ><a
+                  class="example-link"
+                  href="examples/api-tosvg.html"
+                  target="_blank"
+                  rel="noopener"
+                  title="Open a live example"
+                  aria-label="Live example for toSVG"
+                  ><svg class="spoon" viewBox="0 0 24 24" aria-hidden="true">
+                    <use href="#icon-spoon" /></svg
+                ></a>
+              </h4>
               <p>
                 Static SVG markup of the current state, with no handle layer.
                 Safe to drop into HTML, an <code>&lt;img src&gt;</code> data
@@ -1091,7 +1213,19 @@ wm.makeInteractive();                         // draggable handles + tooltip</co
           </div>
           <div class="patch">
             <div>
-              <h4><code>toState()</code> → <code>object</code></h4>
+              <h4>
+                <code>toState()</code> → <code>object</code
+                ><a
+                  class="example-link"
+                  href="examples/api-tostate.html"
+                  target="_blank"
+                  rel="noopener"
+                  title="Open a live example"
+                  aria-label="Live example for toState"
+                  ><svg class="spoon" viewBox="0 0 24 24" aria-hidden="true">
+                    <use href="#icon-spoon" /></svg
+                ></a>
+              </h4>
               <p>
                 Serializable snapshot:
                 <code
@@ -1108,7 +1242,17 @@ wm.makeInteractive();                         // draggable handles + tooltip</co
           <div class="patch">
             <div>
               <h4>
-                <code>await toInteractiveBundle()</code> → <code>string</code>
+                <code>await toInteractiveBundle()</code> → <code>string</code
+                ><a
+                  class="example-link"
+                  href="examples/api-bundle.html"
+                  target="_blank"
+                  rel="noopener"
+                  title="Open a live example"
+                  aria-label="Live example for toInteractiveBundle"
+                  ><svg class="spoon" viewBox="0 0 24 24" aria-hidden="true">
+                    <use href="#icon-spoon" /></svg
+                ></a>
               </h4>
               <p>
                 Full self-contained HTML document — library source inlined, no
@@ -1223,6 +1367,12 @@ wm.setAxis('bubbliness', 0.6);</code></pre>
         </div>
       </div>
     </section>
+
+    <!-- ─── Colophon ────────────────────────────────────────────────────── -->
+    <footer class="colophon">
+      Written by Claude Opus and Cursor Composer models. Prompted by
+      <a href="https://lizkhoo.com" target="_blank" rel="noopener">Liz Khoo</a>.
+    </footer>
 
     <style>
       .notes pre.code {
@@ -1575,6 +1725,32 @@ wm.setAxis('bubbliness', 0.6);</code></pre>
         const stage = document.getElementById("stage");
         const outlineDisclaimer = document.getElementById("outline-disclaimer");
         const input = document.getElementById("text-input");
+        // A different charming phrase greets you on each load (letters + spaces only).
+        const STARTER_PHRASES = [
+          "Hello jazz",
+          "fizzy comet",
+          "moon waffle",
+          "velvet thunder",
+          "jellyfish jam",
+          "pocket galaxy",
+          "midnight snack",
+          "lunar picnic",
+          "secret pizza",
+          "tiny dragons",
+          "soft robots",
+          "glow worm",
+          "honey typhoon",
+          "disco pickle",
+          "buttered sky",
+          "zigzag bunny",
+          "cosmic toast",
+          "quiet riot",
+          "wobble spin",
+          "fuzzy logic",
+          "brave toaster",
+        ];
+        input.value =
+          STARTER_PHRASES[Math.floor(Math.random() * STARTER_PHRASES.length)];
         const reset = document.getElementById("reset");
         const exportBtn = document.getElementById("export-code");
         const preset = document.getElementById("preset");
@@ -2073,6 +2249,17 @@ wm.setAxis('bubbliness', 0.6);</code></pre>
                 : "Letters reset to defaults"
             );
           }
+        });
+
+        // Surprise: log-scatter every handle/axis to a delightful random state.
+        // Works across all three engines (each exposes randomize()); in outline
+        // mode the axis sliders are re-synced to the new values.
+        const surprise = document.getElementById("surprise");
+        surprise.addEventListener("click", () => {
+          if (!wm || !wm.randomize) return;
+          wm.randomize();
+          if (isOutlineDeformMode()) syncAxisControls();
+          flash("Surprise!");
         });
 
         // ─── Export modal ─────────────────────────────────────────────
