@@ -438,33 +438,10 @@
         height: auto;
       }
       .outline-disclaimer {
-        width: 100%;
-        max-width: 720px;
-        margin: 0 auto 20px;
-        padding: 12px 14px;
-        font-size: 13px;
-        line-height: 1.5;
         color: var(--muted);
-        background: var(--grey-100);
-        border: 1px solid var(--rule);
-        border-radius: 3px;
       }
       .outline-disclaimer[hidden] {
         display: none;
-      }
-      .outline-disclaimer p {
-        margin: 0 0 8px;
-      }
-      .outline-disclaimer p:last-child {
-        margin: 0;
-      }
-      .outline-disclaimer strong {
-        color: var(--ink);
-      }
-      .outline-disclaimer .attribution {
-        font-family: var(--mono);
-        font-size: 11px;
-        color: var(--grey-600);
       }
       .ctrl.parametric-only[hidden] {
         display: none;
@@ -477,8 +454,11 @@
       .footer {
         padding: 20px 28px 32px;
         display: flex;
-        flex-direction: column;
-        gap: 16px;
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 8px 24px;
         font-family: var(--mono);
         font-size: 11px;
         letter-spacing: 0.04em;
@@ -965,12 +945,6 @@
 
     <!-- ─── Hero render ─────────────────────────────────────────────────── -->
     <main class="stage-wrap" aria-label="Interactive wordmark editor">
-      <div
-        id="outline-disclaimer"
-        class="outline-disclaimer"
-        role="note"
-        hidden
-      ></div>
       <div id="stage" class="stage"></div>
       <div class="stage-actions">
         <button
@@ -1001,6 +975,12 @@
           >Filled circles = positional anchors</span
         >
       </div>
+      <div
+        id="outline-disclaimer"
+        class="outline-disclaimer"
+        role="note"
+        hidden
+      ></div>
     </div>
 
     <!-- ─── Developer documentation ─────────────────────────────────────── -->
@@ -1952,8 +1932,17 @@ wm.setAxis('bubbliness', 0.6);</code></pre>
           const a = document.createElement("a");
           a.href = url;
           a.download = filename;
+          // The anchor must be in the document (Firefox) and the blob URL must
+          // survive long enough for the browser to start the download —
+          // revoking synchronously after click() races the fetch and silently
+          // cancels the download in Chrome. Defer cleanup to the next task.
+          a.style.display = "none";
+          document.body.appendChild(a);
           a.click();
-          URL.revokeObjectURL(url);
+          setTimeout(() => {
+            URL.revokeObjectURL(url);
+            a.remove();
+          }, 0);
         }
 
         function parseHex(raw) {
@@ -2052,12 +2041,12 @@ wm.setAxis('bubbliness', 0.6);</code></pre>
             el.hidden = !isMonoPreset();
           });
           if (outlineDeform || anatomyDeform) {
-            outlineDisclaimer.innerHTML = SL.outlineAttributionHtml(
-              currentPreset
-            )
-              .replace(/^<aside[^>]*>/, "")
-              .replace(/<\/aside>$/, "");
-            outlineDisclaimer.hidden = false;
+            const presetInfo = SL.presets[currentPreset];
+            outlineDisclaimer.textContent =
+              presetInfo && presetInfo.attribution
+                ? presetInfo.attribution + " · " + presetInfo.license
+                : "";
+            outlineDisclaimer.hidden = !outlineDisclaimer.textContent;
             footerHintOutlineDeform.hidden = !outlineDeform;
             footerHintParametric.hidden = true;
             footerHintParametric2.hidden = true;
