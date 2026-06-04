@@ -131,9 +131,11 @@
         transform: translateX(-50%) translateY(0);
       }
       .mast .row-secondary .ctrl label {
+        font-family: var(--mono);
+        font-size: 10px;
         color: var(--muted);
         text-transform: uppercase;
-        letter-spacing: 0.04em;
+        letter-spacing: 0.06em;
         white-space: nowrap;
       }
       .mast .row-secondary .divider {
@@ -760,7 +762,7 @@
           class="ctrl"
           data-tip="Starter font mood — tunes stroke weight, curvature, and glyph params inspired by open-source typefaces."
         >
-          <label id="preset-label" for="preset-trigger">Reference face</label>
+          <label id="preset-label" for="preset-trigger">Start with</label>
           <div class="preset-picker" id="preset-picker">
             <select
               id="preset"
@@ -2098,7 +2100,7 @@ wm.setAxis('bubbliness', 0.6);</code></pre>
           currentPreset = value;
           syncPresetPicker(value);
           await mount(safeText(input.value));
-          flash("Reference face: " + (PRESET_LABELS[value] || value));
+          flash("Start with: " + (PRESET_LABELS[value] || value));
         }
 
         async function mount(text) {
