@@ -1941,10 +1941,23 @@ wm.setAxis('bubbliness', 0.6);</code></pre>
           a.style.display = "none";
           document.body.appendChild(a);
           a.click();
-          setTimeout(() => {
+          // Clean up only once the browser has had a real chance to read the
+          // blob. A 0 ms timeout races the download read and silently cancels
+          // large files in Chrome. Revoke on the next window focus (the save
+          // dialog / download shelf blurs the page, so focus returns after the
+          // download has started) with a long-delay fallback for browsers that
+          // download without blurring. Whichever fires first wins; the other is
+          // a no-op since the URL/anchor are already gone.
+          let cleaned = false;
+          const cleanup = () => {
+            if (cleaned) return;
+            cleaned = true;
+            window.removeEventListener("focus", cleanup);
             URL.revokeObjectURL(url);
             a.remove();
-          }, 0);
+          };
+          window.addEventListener("focus", cleanup);
+          setTimeout(cleanup, 60000);
         }
 
         function parseHex(raw) {
@@ -2584,7 +2597,10 @@ wm.setAxis('bubbliness', 0.6);</code></pre>
         );
 
         exportHtmlDownload.addEventListener("click", () => {
-          if (!exportCachedHtml) return;
+          if (!exportCachedHtml) {
+            flash("Nothing to download — open Export code first");
+            return;
+          }
           downloadText("sculpt-" + exportSlug() + ".html", exportCachedHtml);
           flash("Standalone HTML downloaded");
         });
@@ -2594,6 +2610,10 @@ wm.setAxis('bubbliness', 0.6);</code></pre>
           // downloaded file directly to verify before pasting into their
           // own site.
           const snippet = exportEmbedCode.value;
+          if (!snippet) {
+            flash("Nothing to download — open Export code first");
+            return;
+          }
           const wrapped =
             "<!DOCTYPE html>\n" +
             '<html lang="en">\n' +

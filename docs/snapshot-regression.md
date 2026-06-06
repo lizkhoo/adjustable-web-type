@@ -17,11 +17,11 @@ For each preset (`bubbly`, `instrumentSerif`, `sourceSans`, `bitter`, `ibmPlexMo
 3. Export code or screenshot `#stage` SVG
 4. Note filename: `snap-{preset}-axis-{value}-hello-jazz.svg`
 
-| Preset | Primary axis |
-|--------|----------------|
-| `bubbly` | Bubbliness |
+| Preset                      | Primary axis |
+| --------------------------- | ------------ |
+| `bubbly`                    | Bubbliness   |
 | `instrumentSerif`, `bitter` | Serif length |
-| `sourceSans`, `ibmPlexMono` | Width |
+| `sourceSans`, `ibmPlexMono` | Width        |
 
 ## Parametric mode (`none` preset)
 
@@ -31,13 +31,30 @@ For each preset (`bubbly`, `instrumentSerif`, `sourceSans`, `bitter`, `ibmPlexMo
 
 ## Spot checks
 
-| Check | What to verify |
-|-------|----------------|
-| `bubbly` bubbliness | At `0` the outline matches Rubik Bubbles as-is; at `0.5` ~10 sine-wave bumps ripple around each contour; at `1` ~20 bumps with 6%-of-glyph amplitude |
-| `instrumentSerif` / `bitter` | Serif stubs grow at axis 1 |
-| Mouse follow (outline) | Primary axis tracks cursor X |
-| Mouse follow (parametric) | Tangent handles only |
-| Static compare | Filled paths, no handles |
-| Reset (outline) | Axis defaults restored |
+| Check                        | What to verify                                                                                                                                       |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `bubbly` bubbliness          | At `0` the outline matches Rubik Bubbles as-is; at `0.5` ~10 sine-wave bumps ripple around each contour; at `1` ~20 bumps with 6%-of-glyph amplitude |
+| `instrumentSerif` / `bitter` | Serif stubs grow at axis 1                                                                                                                           |
+| Mouse follow (outline)       | Primary axis tracks cursor X                                                                                                                         |
+| Mouse follow (parametric)    | Tangent handles only                                                                                                                                 |
+| Static compare               | Filled paths, no handles                                                                                                                             |
+| Reset (outline)              | Axis defaults restored                                                                                                                               |
 
 Store exports under `docs/snapshots/` if you want a repo baseline (gitignored by default).
+
+## Export download smoke check
+
+Run after any change to `downloadText()` or the Export-code modal handlers.
+
+1. Select the **`bubbly`** preset (largest standalone bundle, ~1.7 MB).
+2. Click **Export code** → modal opens, no red "Export failed" flash.
+3. Click **Download .html** (standalone): a file `sculpt-{slug}.html` saves in
+   full (~1.7 MB, not 0 bytes / truncated), flash reads "Standalone HTML
+   downloaded". Open the file in a fresh tab → the wordmark SVG renders.
+4. Click **Download .html** (embed): `sculpt-{slug}-embed.html` saves, flash
+   reads "Embed snippet downloaded"; opening it renders the snippet.
+5. Negative case: reload, then click the standalone **Download .html** before
+   opening Export code → it must flash "Nothing to download — open Export code
+   first" and produce **no** download (no silent no-op).
+6. Bonus: repeat step 3 under DevTools CPU throttling (6×) to confirm the large
+   blob download is not silently cancelled by blob-URL cleanup.
